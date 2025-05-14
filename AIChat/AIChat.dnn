@@ -1,0 +1,53 @@
+<dotnetnuke type="Package" version="5.0">
+  <packages>
+    <package name="AIChat" type="PersonaBar" version="01.00.00">
+      <friendlyName>AI Chat</friendlyName>
+      <description>PersonaBar extension for AI-powered chat using Anthropic Claude and Vue.js frontend.</description>
+      <iconFile>~/DesktopModules/Admin/AIChat/icon_aichat.png</iconFile>
+     <owner>
+        <name>Satrabel.be</name>
+        <organization>Satrabel.be</organization>
+        <url>http://www.satrabel.be</url>
+        <email>info@satrabel.be</email>
+      </owner>
+      <license src="License.txt"></license>
+      <releaseNotes src="ReleaseNotes.txt"></releaseNotes>
+      <azureCompatible>true</azureCompatible>
+      <dependencies>
+        <dependency type="CoreVersion">09.03.00</dependency>
+        <dependency type="ManagedPackage" version="01.00.00">Dnn.PersonaBar.UI</dependency>
+      </dependencies>
+      <components>
+        <component type="PersonaBarMenu">
+          <menu>
+            <identifier>Satrabel.AIChat</identifier>
+            <moduleName>AIChat</moduleName>
+            <folderName>Satrabel.AIChat</folderName>
+            <resourceKey>nav_AIChat</resourceKey>
+            <path>AIChat</path>
+            <parent>Manage</parent>
+            <order>100</order>
+            <defaultPermissions>Administrators</defaultPermissions>
+          </menu>
+        </component>
+        <component type="ResourceFile">
+          <resourceFiles>
+            <basePath>DesktopModules/Admin/Dnn.PersonaBar/Modules/Satrabel.AIChat</basePath>
+            <resourceFile>
+              <name>Resources.zip</name>
+            </resourceFile>
+          </resourceFiles>
+        </component>
+        <component type="Assembly">
+          <assemblies>
+            <assembly>
+              <name>Satrabel.AIChat.dll</name>
+              <path>bin</path>
+            </assembly>
+          </assemblies>
+        </component>
+       
+      </components>
+    </package>
+  </packages>
+</dotnetnuke> 
