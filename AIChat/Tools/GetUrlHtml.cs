@@ -12,15 +12,15 @@ using Newtonsoft.Json;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetUrlHtmlTool : ITool
+    class GetHtmlTool : ITool
     {
         public string Name => "Get HTML of an url";
 
         public string Description => "Retrieves the HTML content from a specified URL";
 
-        public MethodInfo Function => typeof(GetUrlHtmlTool).GetMethod(nameof(GetUrlHtml));
+        public MethodInfo Function => typeof(GetHtmlTool).GetMethod(nameof(GetHtml));
 
-        public static string GetUrlHtml(string url)
+        public static string GetHtml(string url)
         {
             try
             {

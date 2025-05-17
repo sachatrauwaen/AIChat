@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Satrabel.PersonaBar.AIChat.Apis.Dto
 {
@@ -18,5 +19,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
 
         [JsonProperty("toolFullname")]
         public string ToolFullname { get;  set; }
+
+        public List<ContentDto> AContent { get; set; }
     }
 }

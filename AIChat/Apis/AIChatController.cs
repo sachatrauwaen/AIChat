@@ -19,6 +19,7 @@ using DotNetNuke.Entities.Users;
 using System.Web;
 using DotNetNuke.Common;
 using System.IO;
+using System.Web.UI.HtmlControls;
 
 
 namespace Satrabel.PersonaBar.AIChat.Apis
@@ -126,7 +127,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     Tool.CreateFromClass<GetModuleTool>(),
                     Tool.CreateFromClass<SetModuleTool>(),
                     Tool.CreateFromClass<GetPagesTool>(),
-                    Tool.CreateFromClass<GetUrlHtmlTool>(),
+                    Tool.CreateFromClass<GetHtmlTool>(),
                     Tool.CreateFromClass<SendEmailTool>()
                     }.ToList();
 
@@ -137,26 +138,26 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 var isHost = UserController.Instance.GetCurrentUserInfo()?.IsSuperUser ?? false;
 
                 var hostContext = $"<host>Version = v.{Globals.FormatVersion(application.Version, true)}, Product = {application.Description}, PortalCount = {portalCount}, Framework = {(isHost ? Globals.NETFrameworkVersion.ToString() : string.Empty)} </host>";
-                var ps= PortalSettings;
+                var ps = PortalSettings;
                 var portalcontext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
 
                 var airulesFilename = ps.HomeSystemDirectoryMapPath + "airules.md";
-                var airules= string.Empty;
+                var airules = string.Empty;
                 if (File.Exists(airulesFilename))
                 {
-                    airules = File.ReadAllText(airulesFilename);                    
+                    airules = File.ReadAllText(airulesFilename);
                 }
                 else
                 {
                     File.WriteAllText(airulesFilename, "# ai rules");
                 }
 
-                    var response = await client.CreateMessageAsync(new MessageRequest(
-                      AnthropicModels.Claude35Sonnet,
-                      messages,
-                      system: $"I am your dnn assistant and can help you with different tasks related to website admin. {hostContext} {portalcontext} {airules}",
-                      tools: tools
-                    ));
+                var response = await client.CreateMessageAsync(new MessageRequest(
+                  AnthropicModels.Claude35Sonnet,
+                  messages,
+                  system: $"I am your dnn assistant and can help you with different tasks related to website admin. {hostContext} {portalcontext} {airules}",
+                  tools: tools
+                ));
 
                 if (!response.IsSuccess)
                 {
@@ -259,15 +260,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     });
                 }
 
-
-
                 return new ChatResponse
                 {
                     //Response = finalResponse, 
                     Messages = dtos,
                     Success = true,
                     Message = "Tool execution completed successfully",
-                    IsMarkdown = true
+                    // AMessages = messages,
+                    // AResponse = response.Value
                 };
 
                 /*
@@ -384,6 +384,326 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
         }
 
+        [ValidateAntiForgeryToken]
+        [HttpPost]
+        public async Task<ChatResponse> ChatWithTools2(ChatToolRequest request)
+        {
+            ToolResponse toolResponse = null;
+            try
+            {
+                var client = new AnthropicApiClient(_apiKey, new HttpClient());
+
+                var dtos = request.Messages;
+
+                if (!request.RunTool && dtos.Any() && dtos.Last().AContent?.Any(c => c.Type == "tool_use") == true)
+                {
+                    dtos.RemoveAt(dtos.Count - 1);
+                }
+
+                List<Message> messages = request.Messages.Select(m => new Message(
+                  m.Role,
+                  GetContent(m)
+                )).ToList();
+
+                List<Tool> readOnlyTools = new[] {
+                    Tool.CreateFromClass<GetModulesTool>(),
+                    Tool.CreateFromClass<GetModuleTool>(),
+                    Tool.CreateFromClass<GetPagesTool>(),
+                    Tool.CreateFromClass<GetHtmlTool>(),
+                    Tool.CreateFromClass<GetFoldersTool>(),
+                    Tool.CreateFromClass<GetFilesTool>(),
+                    Tool.CreateFromClass<ReadFileTool>(),
+                    }.ToList();
+
+
+                List<Tool> allTools = new[] {
+                    Tool.CreateFromClass<GetModulesTool>(),
+                    Tool.CreateFromClass<GetModuleTool>(),
+                    Tool.CreateFromClass<SetModuleTool>(),
+                    Tool.CreateFromClass<GetPagesTool>(),
+                    Tool.CreateFromClass<GetHtmlTool>(),
+                    Tool.CreateFromClass<SendEmailTool>(),
+                    Tool.CreateFromClass<GetFoldersTool>(),
+                    Tool.CreateFromClass<GetFilesTool>(),
+                    Tool.CreateFromClass<ReadFileTool>(),
+                    Tool.CreateFromClass<WriteFileTool>()
+                    }.ToList();
+
+                var application = DotNetNuke.Application.DotNetNukeContext.Current.Application;
+                var controlBarController = DotNetNuke.Web.Components.Controllers.ControlBarController.Instance;
+                //var upgradeIndicator = controlBarController.GetUpgradeIndicator(application.Version, request.IsLocal, request.IsSecureConnection);
+                var portalCount = DotNetNuke.Entities.Portals.PortalController.Instance.GetPortals().Count;
+                var isHost = UserController.Instance.GetCurrentUserInfo()?.IsSuperUser ?? false;
+
+                var hostContext = $"<host>Version = v.{Globals.FormatVersion(application.Version, true)}, Product = {application.Description}, PortalCount = {portalCount}, Framework = {(isHost ? Globals.NETFrameworkVersion.ToString() : string.Empty)} </host>";
+                var ps = PortalSettings;
+                var portalcontext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
+
+                var airulesFilename = ps.HomeSystemDirectoryMapPath + "airules.md";
+                var airules = string.Empty;
+                if (File.Exists(airulesFilename))
+                {
+                    airules = File.ReadAllText(airulesFilename);
+                }
+                else
+                {
+                    File.WriteAllText(airulesFilename, "# ai rules");
+                }
+                var systemPrompt = $"I am your dnn assistant and can help you with different tasks related to website admin. {hostContext} {portalcontext} {airules}";
+                AnthropicResult<MessageResponse> response;
+                if (request.RunTool)
+                {
+                    var toolCall = GetToolCall(request.ToolUse, allTools);
+                    var tool = toolCall.ToolUse.ToText();
+
+                    var toolCallResult = await toolCall.InvokeAsync<string>();
+                    string toolResultContent;
+
+                    if (toolCallResult.IsSuccess && toolCallResult.Value != null)
+                    {
+                        Console.WriteLine(toolCallResult.Value);
+                        toolResultContent = toolCallResult.Value;
+                    }
+                    else
+                    {
+                        Console.WriteLine(toolCallResult.Error.Message);
+                        toolResultContent = toolCallResult.Error.Message;
+                    }
+
+                    messages.Add(
+                          new AnthropicClient.Models.Message(
+                            MessageRole.User,
+                            new List<Content> {
+                              new ToolResultContent(
+                                  toolCall.ToolUse.Id,
+                                  toolResultContent
+                                )}
+                          )
+                        );
+
+                    dtos.Add(new MessageDto
+                    {
+                        Role = MessageRole.User,
+                        Content = toolResultContent,
+                        ContentType = "tool_result",
+                        ToolName = toolCall.Tool.Name,
+                        ToolFullname = tool,
+                        AContent = new List<ContentDto> {
+                              new ContentDto(){
+                                  Type= "tool_result",
+                                  Id= toolCall.ToolUse.Id,
+                                  Result = toolResultContent
+                              } 
+                        }
+                    });
+                    
+
+                    response = await client.CreateMessageAsync(new MessageRequest(
+                      AnthropicModels.Claude35Sonnet,
+                      messages,
+                      tools: request.IsReadOnly ? readOnlyTools : allTools,
+                      system: systemPrompt
+                    ));
+
+                    if (!response.IsSuccess)
+                    {
+                        Console.WriteLine("Failed to create message");
+                        Console.WriteLine("Error Type: {0}", response.Error.Error.Type);
+                        Console.WriteLine("Error Message: {0}", response.Error.Error.Message);
+                        throw new Exception($"Failed to create message: {response.Error.Error.Message}");
+                    }
+
+                    foreach (var content in response.Value.Content)
+                    {
+                        switch (content)
+                        {
+                            case TextContent textContent:
+                                Console.WriteLine(textContent.Text);
+                                break;
+                        }
+                    }
+
+                    messages.Add(new Message(MessageRole.Assistant, response.Value.Content));
+                    dtos.Add(new MessageDto
+                    {
+                        Role = MessageRole.Assistant,
+                        Content = string.Join("\n", response.Value.Content.Where(c => c.Type != "tool_use").Select(c => c.ToText())),
+                        ContentType = string.Join(",", response.Value.Content.Where(c => c.Type != "tool_use").Select(c => c.Type)),
+                        AContent = response.Value.Content.Select(c => GetContentDto(c)).ToList()
+                    });
+                }
+                else
+                {
+                    response = await client.CreateMessageAsync(new MessageRequest(
+                     AnthropicModels.Claude35Sonnet,
+                     messages,
+                     system: systemPrompt,
+                     tools: request.IsReadOnly ? readOnlyTools : allTools
+                   ));
+
+                    if (!response.IsSuccess)
+                    {
+                        Console.WriteLine("Failed to create message");
+                        Console.WriteLine("Error Type: {0}", response.Error.Error.Type);
+                        Console.WriteLine("Error Message: {0}", response.Error.Error.Message);
+                        throw new Exception($"Failed to create message: {response.Error.Error.Message}");
+                    }
+
+                    messages.Add(new Message(MessageRole.Assistant, response.Value.Content));
+                    dtos.Add(new MessageDto
+                    {
+                        Role = MessageRole.Assistant,
+                        Content = string.Join("\n", response.Value.Content.Where(c => c.Type != "tool_use").Select(c => c.ToText())),
+                        ContentType = string.Join(",", response.Value.Content.Where(c => c.Type != "tool_use").Select(c => c.Type)),
+                        AContent = response.Value.Content.Select(c => GetContentDto(c)).ToList()
+                    }
+                    );
+
+                    foreach (var content in response.Value.Content)
+                    {
+                        switch (content)
+                        {
+                            case TextContent textContent:
+                                Console.WriteLine(textContent.Text);
+                                break;
+                            case ToolUseContent toolUseContent:
+                                Console.WriteLine(toolUseContent.Name);
+                                break;
+                        }
+                    }
+                }
+
+                if (response.Value.ToolCall != null)
+                {
+                    toolResponse = new ToolResponse
+                    {
+                        Name = response.Value.ToolCall.Tool.Name,
+                        Fullname = response.Value.ToolCall.ToolUse.ToText(),
+                        ToolUse = response.Value.ToolCall.ToolUse,
+                    };
+                }
+
+
+
+                return new ChatResponse
+                {
+                    //Response = finalResponse, 
+                    Messages = dtos,
+                    Success = true,
+                    Message = "",
+                    //AMessages = messages,
+                    //AResponse = response.Value,
+                    Tool = toolResponse
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ChatResponse
+                {
+                    Success = false,
+                    Response = null,
+                    Message = $"Error : {ex.Message}"
+                };
+            }
+        }
+
+        private static ContentDto GetContentDto(Content content)
+        {
+            var res = new ContentDto();
+            switch (content)
+            {
+                case TextContent textContent:
+                    res.Type = "text";
+                    res.Text = textContent.Text;
+                    break;
+                case ToolUseContent toolUseContent:                    
+                    res.Type = "tool_use";
+                    res.Id = toolUseContent.Id;
+                    res.Name = toolUseContent.Name;
+                    res.Input = toolUseContent.Input;
+                    break;
+                case ToolResultContent toolResultContent:
+                    res.Type = "tool_result";
+                    res.Id = toolResultContent.ToolUseId;
+                    res.Result = toolResultContent.Content;
+                    break;
+            }
+
+            return res;
+        }
+
+        private static List<Content> GetContent(MessageDto m)
+        {
+            var res = new List<Content>();
+            if (m.AContent != null)
+            {
+                foreach (var item in m.AContent)
+                {
+                    if (item.Type == "text")
+                    {
+                        res.Add(new TextContent(item.Text));
+                    }
+                    else if (item.Type == "tool_use")
+                    {
+                        var toolUse = new ToolUseContent()
+                        {
+                            Id = item.Id,
+                            Name = item.Name,
+                            Input = item.Input
+
+                        };
+                        res.Add(toolUse);
+                    }
+                    else if (item.Type == "tool_result")
+                    {
+                        var toolResult = new ToolResultContent(item.Id, item.Result);
+                        res.Add(toolResult);
+                    }
+                }
+            }
+            else
+            {
+                return new List<Content> { new TextContent(m.Content) };
+            }
+            return res;
+        }
+
+        private ToolCall GetToolCall(MessageResponse response, List<Tool> tools)
+        {
+            var toolUse = response.Content.OfType<ToolUseContent>().FirstOrDefault();
+
+            if (toolUse is null)
+            {
+                return null;
+            }
+
+            var tool = tools.FirstOrDefault(t => t.Name == toolUse.Name);
+
+            if (tool is null)
+            {
+                return null;
+            }
+
+            return new ToolCall(tool, toolUse);
+        }
+
+        private ToolCall GetToolCall(ToolUseContent toolUse, List<Tool> tools)
+        {
+            if (toolUse is null)
+            {
+                return null;
+            }
+
+            var tool = tools.FirstOrDefault(t => t.Name == toolUse.Name);
+
+            if (tool is null)
+            {
+                return null;
+            }
+
+            return new ToolCall(tool, toolUse);
+        }
+
         /// <summary>
         /// Creates messages with the system instruction for markdown formatting based on user preferences
         /// </summary>
@@ -434,6 +754,16 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
             [JsonProperty("disableParallelToolUse")]
             public bool? DisableParallelToolUse { get; set; }
+
+
+            [JsonProperty("runTool")]
+            public bool RunTool { get; set; }
+
+            [JsonProperty("toolUse")]
+            public ToolUseContent ToolUse { get; set; }
+
+            [JsonProperty("isReadOnly")]
+            public bool IsReadOnly { get; set; }
         }
     }
 
@@ -447,6 +777,13 @@ namespace Satrabel.PersonaBar.AIChat.Apis
     {
         [JsonProperty("messages")]
         public List<MessageDto> Messages { get; set; }
+
+        [JsonProperty("aMessages")]
+        public List<MessageDto> AMessages { get; set; }
+
+        [JsonProperty("aResponse")]
+        public MessageResponse AResponse { get; set; }
+
     }
 
     public class ChatResponse
@@ -460,11 +797,17 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [JsonProperty("message")]
         public string Message { get; set; }
 
-        [JsonProperty("isMarkdown")]
-        public bool IsMarkdown { get; set; }
-
         [JsonProperty("messages")]
         public IEnumerable<MessageDto> Messages { get; set; }
+
+        //[JsonProperty("aMessages")]
+        //public List<Message> AMessages { get; set; }
+
+        //[JsonProperty("aResponse")]
+        //public MessageResponse AResponse { get; set; }
+
+        [JsonProperty("tool")]
+        public ToolResponse Tool { get; set; }
     }
 
     public class MarkdownPreferences

@@ -17,7 +17,7 @@ namespace Satrabel.AIChat.Apis
                     return textContent.Text;
                     break;
                 case ToolUseContent toolUseContent:
-                    return $"Tool : {toolUseContent.Name} ({string.Join(", ", toolUseContent.Input.Select(d=> d.Key+ "="+d.Value))})";
+                    return $"{toolUseContent.Name} ({string.Join(", ", toolUseContent.Input.Select(d=> d.Key+ "="+d.Value))})";
                     break;
                 case ToolResultContent toolResultContent:
                     return $"{toolResultContent.Content}";

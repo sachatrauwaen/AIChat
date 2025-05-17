@@ -23,7 +23,15 @@ namespace Satrabel.AIChat.Tools
 
         public MethodInfo Function => typeof(SendEmailTool).GetMethod(nameof(SendEmail));
 
-        public static string SendEmail(string toEmail, string subject, string body, bool isHtml = false)
+        public static string SendEmail(
+            [FunctionParameter(description: "Email address of email destination", name: "toEmail", required: true)]
+            string toEmail,
+            [FunctionParameter(description: "Subject of email", name: "subject", required: true)]
+            string subject,
+            [FunctionParameter(description: "Body of email", name: "body", required: true)]
+            string body,
+            [FunctionParameter(description: "Is the email body in html", name: "isHtml", required: false)]
+            bool isHtml = false)
         {
             try
             {

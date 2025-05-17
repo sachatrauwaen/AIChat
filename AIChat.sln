@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIChat", "AIChat\AIChat.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIChatUnitTest", "AIChatUnitTest\AIChatUnitTest.csproj", "{308B9A31-2279-4424-9A56-048E9CBD5732}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnthropicClient", "..\anthropic-client\src\AnthropicClient\AnthropicClient.csproj", "{94903686-4FA8-FF4F-38BA-EA5995C153D7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{308B9A31-2279-4424-9A56-048E9CBD5732}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{308B9A31-2279-4424-9A56-048E9CBD5732}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{308B9A31-2279-4424-9A56-048E9CBD5732}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94903686-4FA8-FF4F-38BA-EA5995C153D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94903686-4FA8-FF4F-38BA-EA5995C153D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94903686-4FA8-FF4F-38BA-EA5995C153D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94903686-4FA8-FF4F-38BA-EA5995C153D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
