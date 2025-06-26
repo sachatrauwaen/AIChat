@@ -38,6 +38,10 @@
     <Reference Include="AdvancedStringBuilder, Version=0.1.0.0, Culture=neutral, PublicKeyToken=e818a2fc08933ddb, processorArchitecture=MSIL">
       <HintPath>...\DNN910\packages\AdvancedStringBuilder.0.1.0\lib\net45\AdvancedStringBuilder.dll</HintPath>
     </Reference>
+    <Reference Include="Dnn.PersonaBar.Extensions, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\DNN910\bin\Dnn.PersonaBar.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="Dnn.PersonaBar.Library, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Dnn.PersonaBar.Library.9.10.2\lib\net45\Dnn.PersonaBar.Library.dll</HintPath>
     </Reference>
@@ -115,19 +119,49 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Apis\AIChatController.cs" />
+    <Compile Include="Apis\Dto\ChatRequest.cs" />
+    <Compile Include="Apis\Dto\ChatResponse.cs" />
+    <Compile Include="Apis\Dto\ChatToolRequest.cs" />
     <Compile Include="Apis\Dto\ContentDto.cs" />
+    <Compile Include="Apis\Dto\RuleDto.cs" />
     <Compile Include="Apis\Extensions.cs" />
-    <Compile Include="Apis\ToolResponse.cs" />
-    <Compile Include="Services\AnthropicClient.cs" />
-    <Compile Include="Services\AnthropicModels.cs" />
-    <Compile Include="Services\ConversationResponse.cs" />
+    <Compile Include="Apis\Dto\SettingsDto.cs" />
+    <Compile Include="Apis\Dto\MarkdownPreferences.cs" />
+    <Compile Include="Apis\Dto\ToolResponse.cs" />
+    <Compile Include="Apis\Dto\InfoDto.cs" />
+    <Compile Include="Apis\Dto\ModelDto.cs" />
+    <Compile Include="History\ChatConversation.cs" />
+    <Compile Include="History\ChatHistoryManager.cs" />
+    <Compile Include="History\ChatMessage.cs" />
+    <Compile Include="History\ConversationStats.cs" />
+    <Compile Include="History\ExportFormat.cs" />
+    <Compile Include="History\MessageRole.cs" />
+    <Compile Include="History\Program.cs" />
+    <Compile Include="ContextWindow\ContextAwareChatMessage.cs" />
+    <Compile Include="ContextWindow\ContextWindowConfig.cs" />
+    <Compile Include="ContextWindow\ContextWindowExample.cs" />
+    <Compile Include="ContextWindow\ContextWindowManager.cs" />
+    <Compile Include="ContextWindow\ContextWindowStats.cs" />
+    <Compile Include="ContextWindow\MessagePriority.cs" />
+    <Compile Include="ContextWindow\MessageSummarizer.cs" />
+    <Compile Include="ContextWindow\TokenEstimationMethod.cs" />
+    <Compile Include="ContextWindow\TokenEstimator.cs" />
+    <Compile Include="ContextWindow\TrimmingStrategy.cs" />
+    <Compile Include="Services\AnthropicService.cs" />
+    <Compile Include="Services\IAIChatTool.cs" />
+    <Compile Include="Services\ToolsService.cs" />
+    <Compile Include="Services_old\AnthropicClient.cs" />
+    <Compile Include="Services_old\AnthropicModels.cs" />
+    <Compile Include="Services_old\ConversationResponse.cs" />
     <Compile Include="Apis\Dto\MessageDto.cs" />
-    <Compile Include="Services\MessageParameters.cs" />
+    <Compile Include="Services_old\MessageParameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools\AddModule.cs" />
     <Compile Include="Tools\AddPage.cs" />
+    <Compile Include="Tools\DeletePage.cs" />
     <Compile Include="Tools\GetFiles.cs" />
     <Compile Include="Tools\GetFolders.cs" />
+    <Compile Include="Tools\GetPage.cs" />
     <Compile Include="Tools\GetSystemFiles.cs" />
     <Compile Include="Tools\ReadFile.cs" />
     <Compile Include="Tools\ReadSystemFile.cs" />
@@ -136,8 +170,8 @@
     <Compile Include="Tools\GetModules.cs" />
     <Compile Include="Tools\GetPages.cs" />
     <Compile Include="Tools\GetUrlHtml.cs" />
-    <Compile Include="Tools\GetWeatherTool.cs" />
     <Compile Include="Tools\SendEmail.cs" />
+    <Compile Include="Tools\UpdatePage.cs" />
     <Compile Include="Tools\WriteFile.cs" />
     <Compile Include="Tools\WriteSystemFile.cs" />
   </ItemGroup>
@@ -160,6 +194,8 @@
     <None Include="ClientSide\package.json" />
     <None Include="ClientSide\src\components\AIChat.vue" />
     <None Include="AIChat.dnn" />
+    <None Include="ClientSide\src\components\AIChat2.vue" />
+    <None Include="ClientSide\src\components\AISettings.vue" />
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>
@@ -167,6 +203,7 @@
     <Content Include="AIChat.html" />
     <Content Include="BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll" />
     <Content Include="BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.xml" />
+    <Content Include="ClientSide\babel.config.js" />
     <Content Include="ClientSide\index.html" />
     <Content Include="ClientSide\src\aiChatService.js" />
     <Content Include="ClientSide\src\main.js" />
@@ -185,6 +222,7 @@
       <Name>AnthropicClient</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <Extension>zip</Extension>

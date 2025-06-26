@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AnthropicClient.Models;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.FileSystem;
+using DotNetNuke.Services.FileSystem.Internal;
 using Newtonsoft.Json;
 
 namespace Satrabel.AIChat.Tools
@@ -45,7 +46,7 @@ namespace Satrabel.AIChat.Tools
                 // Security check: prevent writing to sensitive file types
                 string extension = Path.GetExtension(fileName).ToLowerInvariant();
                 string[] restrictedExtensions = { ".exe", ".dll", ".config", ".asax", ".cs" };
-                
+
                 if (restrictedExtensions.Contains(extension))
                 {
                     return $"Error: Writing to files with extension '{extension}' is not allowed for security reasons";
@@ -71,6 +72,7 @@ namespace Satrabel.AIChat.Tools
                     }
                 }
 
+
                 // Convert string content to byte array
                 byte[] contentBytes = Encoding.UTF8.GetBytes(content);
                 using (MemoryStream stream = new MemoryStream(contentBytes))
@@ -79,8 +81,26 @@ namespace Satrabel.AIChat.Tools
                     IFileInfo existingFile = fileManager.GetFile(folder, fileName);
                     if (existingFile != null)
                     {
+                        var backupFolderPath = "backup/" + DateTime.Now.ToString("yyyyMMdd") + "/" + folderPath;
+                        IFolderInfo backupFolder = folderManager.GetFolder(portalId, backupFolderPath);
+                        if (backupFolder == null)
+                        {
+                            try
+                            {
+                                backupFolder = folderManager.AddFolder(portalId, backupFolderPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                return $"Error creating backup folder: {ex.Message}";
+                            }
+                        }
                         // Update existing file
                         //fileManager.UpdateFile(existingFile, stream);
+                        IFileInfo backupFile = null;
+                        if (fileManager.GetFile(backupFolder, fileName) == null)
+                        {
+                            backupFile = fileManager.CopyFile(existingFile, backupFolder);
+                        }
                         IFileInfo newFile = fileManager.AddFile(folder, fileName, stream, true);
                         // Return success with file info
                         var updateResult = new
@@ -90,7 +110,8 @@ namespace Satrabel.AIChat.Tools
                             FileName = existingFile.FileName,
                             RelativePath = existingFile.RelativePath,
                             Size = Math.Round(existingFile.Size / 1024.0, 2), // Size in KB
-                            LastModified = existingFile.LastModifiedOnDate
+                            LastModified = existingFile.LastModifiedOnDate,
+                            backup = backupFile == null ? "" : backupFolderPath
                         };
 
                         return JsonConvert.SerializeObject(updateResult);
@@ -99,7 +120,7 @@ namespace Satrabel.AIChat.Tools
                     {
                         // Add new file
                         IFileInfo newFile = fileManager.AddFile(folder, fileName, stream);
-                        
+
                         // Return success with file info
                         var addResult = new
                         {
@@ -128,4 +149,4 @@ namespace Satrabel.AIChat.Tools
             }
         }
     }
-} 
+}

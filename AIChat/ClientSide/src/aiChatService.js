@@ -9,9 +9,19 @@ class AIChatService {
         return sf;
     }
 
+    getInfo(callback, errorCallback) {
+        const sf = this.getServiceFramework("AIChat");
+        sf.get("GetInfo", {}, callback, errorCallback);
+    }
+
     getSettings(callback, errorCallback) {
         const sf = this.getServiceFramework("AIChat");
         sf.get("GetSettings", {}, callback, errorCallback);
+    }
+
+    saveSettings(settings, callback, errorCallback) {
+        const sf = this.getServiceFramework("AIChat");
+        sf.post("SaveSettings", settings, callback, errorCallback);
     }
 
     Chat(message, callback, errorCallback) {
@@ -22,10 +32,7 @@ class AIChatService {
         const sf = this.getServiceFramework("AIChat");
         sf.post("ChatWithTools", message, callback, errorCallback);
     }
-    ChatWithTools2(message, callback, errorCallback) {
-        const sf = this.getServiceFramework("AIChat");
-        sf.post("ChatWithTools2", message, callback, errorCallback);
-    }
+   
 }
 
 const aiChatService = new AIChatService();

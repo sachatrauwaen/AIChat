@@ -11,7 +11,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
 
         [JsonProperty("text")]
         public string Text { get; set; }
-
         
         [JsonProperty("result")]
         public string Result { get; set; }

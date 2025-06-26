@@ -3,7 +3,7 @@
 <Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <WebsitePath>$(MSBuildProjectDirectory)\..\DNN910</WebsitePath>
+    <WebsitePath>$(MSBuildProjectDirectory)\..\..\DNN910x</WebsitePath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -11,31 +11,30 @@
   </PropertyGroup>
   <Import Project="$(ImportPath)" Condition=" '$(ImportPath)' != '' "/>
 
+	
+	<PropertyGroup>
+    <WebsitePath>c:\sacha\dnn\DNN910\</WebsitePath>
+  </PropertyGroup>	
+		
   <Target Name="DeployModule" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     
+	  <Message Text="WebsitePath: $(WebsitePath)" Importance="High" />
+	  
 	<!-- Copy files into Website's bin folder -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.AIChat.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.AIChat.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
-	
-	<!-- Copy files into Website's module folder -->
+	<Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\AnthropicClient.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+
+	  <!-- Copy files into Website's module folder -->
     <ItemGroup>
-      <DeployInclude Include="**\*.ascx" Exclude="packages\**" />
-      <DeployInclude Include="**\*.asmx" Exclude="packages\**" />
-      <DeployInclude Include="**\*.ashx" Exclude="packages\**" />
       <DeployInclude Include="**\*.css" Exclude="packages\**" />
       <DeployInclude Include="**\*.png" Exclude="packages\**" />
       <DeployInclude Include="**\*.html" Exclude="packages\**" />
       <DeployInclude Include="**\*.htm" Exclude="packages\**" />
       <DeployInclude Include="**\*.resx" Exclude="packages\**" />
-      <DeployInclude Include="**\*.aspx" Exclude="packages\**" />
       <DeployInclude Include="**\*.js" Exclude="packages\**;**\_*.js" />
-      <DeployInclude Include="**\*-schema.json" Exclude="packages\**" />
-      <DeployInclude Include="**\*-options.json" Exclude="packages\**" />
       <DeployInclude Include="**\images\**" Exclude="packages\**;**\*.cs" />
-      <DeployInclude Include="**\web.config" Exclude="packages\**" />
       <DeployInclude Include="**\css\**" Exclude="packages\**" />
-      <DeployInclude Include="**\fonts\**" Exclude="packages\**" />
-      <DeployInclude Include="**\font\**" Exclude="packages\**" />
     </ItemGroup>	
 	<Copy SourceFiles="@(DeployInclude)" DestinationFolder="$(WebsitePath)\DesktopModules/Admin/Dnn.PersonaBar/Modules/Satrabel.AIChat\%(RecursiveDir)" SkipUnchangedFiles="True" />
     

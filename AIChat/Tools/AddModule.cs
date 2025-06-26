@@ -26,7 +26,7 @@ namespace Satrabel.AIChat.Tools
 
         public MethodInfo Function => typeof(AddModuleTool).GetMethod(nameof(AddModule));
 
-        public static string AddModule(int tabId, string moduleName, string paneName = "ContentPane", string title = "")
+        public static string AddModule(Int64 tabId, string moduleName, string paneName = "ContentPane", string title = "")
         {
             try
             {
@@ -45,7 +45,7 @@ namespace Satrabel.AIChat.Tools
 
                 // Get the tab (page)
                 var tabController = new TabController();
-                var tab = tabController.GetTab(tabId, portalId);
+                var tab = tabController.GetTab((int)tabId, portalId);
                 if (tab == null)
                 {
                     return $"Error: Page with ID {tabId} not found";
@@ -84,7 +84,7 @@ namespace Satrabel.AIChat.Tools
                     objModule.Initialize(portalId);
 
                     objModule.PortalID = portalId;
-                    objModule.TabID = tabId;
+                    objModule.TabID = (int)tabId;
                     objModule.ModuleOrder = 0;
                     objModule.ModuleTitle = string.IsNullOrEmpty(title) ? objModuleDefinition.FriendlyName : title;
                     objModule.PaneName = paneName;

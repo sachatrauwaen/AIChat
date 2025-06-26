@@ -1,23 +1,24 @@
 <template>
-    <div class="container-fluid pb-5 pt-5 mt-2">
+    <div > 
+    <div v-if="!settings" class="container-fluid pt-5 mt-2" style="padding-bottom: 100px;">
         <div class="fixed-top pt-2 bg-white" style="z-index: 1000;width: 860px;margin-left: 80px;">
             <div class="d-flex gap-2">
-                <h2 class="ps-2">AI Chat</h2>
-                <div class="ps-5 pt-1">
-                    <input class="form-check-input" type="checkbox" v-model="isReadOnly" />
-                    <label class="form-check-label" for="isReadOnly">Read Only</label>
-                </div>
-                <button v-if="messages.length > 0" class="btn btn-secondary position-absolute top-0 end-0 me-5 mt-2" type="button" @click="clear" >
+                <h2 class="ps-2">AI Assistant</h2>
+                
+                <small v-if="totalPrice" class="text-muted  position-absolute top-0 mt-2" style="right: 300px;">Total price: ${{totalPrice.toFixed(5)}} ({{totalInputTokens}} input / {{cacheCreationInputTokens}} cache creation / {{cacheReadInputTokens}} cache read / {{totalOutputTokens}} output tokens)</small>
+                
+                <button class="btn btn-secondary position-absolute top-0 mt-2" style="right: 80px;" type="button" @click="clear" >
                     New Chat
+                </button>
+                <button class="btn btn-secondary position-absolute top-0 end-0 me-5 mt-2" type="button" @click="goSettings">
+                    <i class="bi bi-gear"></i>
                 </button>
             </div>
         </div>
-       
         <div v-for="(msg, i) in messages" :key="i">
             <div v-if="msg.contentType === 'tool_result'">
                 <p>
-                <button class="btn btn-outline-secondary" type="button" @click="toggleVisible(i)" aria-expanded="false" aria-controls="collapseWidthExample">
-                    
+                <button class="btn btn-outline-secondary" type="button" @click="toggleVisible(i)" aria-expanded="false" aria-controls="collapseWidthExample">                    
                     <span><span class="badge text-bg-dark">Tool</span> {{msg.toolName}}</span>
                 </button>
                 </p>
@@ -40,9 +41,12 @@
             </div>
             <div v-else>
                 <div class="alert alert-light" role="alert">
-                    <span class="badge text-bg-warning">&#128100;</span> {{ msg.content }}
+                    <span class="badge text-bg-light">&#128100;</span> {{ msg.content }}
                 </div>
             </div>
+            <!--
+            <small v-if="msg.price" class="text-muted">{{msg.price}}</small>
+            -->
         </div>
         <div v-if="tool">
             <div class="alert alert-light" role="alert">
@@ -67,8 +71,6 @@
                 </div>
             </div>
         </div>
-
-
         <div v-if="messages.length === 0" class="row mt-5 bg-white p-5" style="z-index: 1000;width: 860px;">
             <h1 class="text-center">How can i help you today ?</h1>
             <h3 class="text-center">I am your DNN AI assistant.</h3>
@@ -77,15 +79,36 @@
                 <button class="btn btn-light" @click="userInput='Send a email with a joke to info@example.com'">Send a email</button>
                 <button class="btn btn-light" @click="userInput='Generate a seo report of the home page in a table'">Make a seo report of the home page</button>
             </div>
-            <div class="_card _card-body ">
+            <div class="card card-body border-radius-5">
                 <div class="d-flex gap-2">
-                    <input class="form-control" v-model="userInput" @keyup.enter="sendMessage(false)" :disabled="isThinking || tool" placeholder="Type your message..." />
+                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />
                     
-                    <div v-if="isThinking" class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <div v-else>
-                        <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                </div>
+                <div class="d-flex gap-2 pt-2 justify-content-end">
+                    
+                    <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
+                        <option value="">No instructions</option>
+                        <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
+                       
+                    </select>
+                    <!--
+                    <select class="form-select _form-select-sm" style="width: 100px;" v-model="selectedModel">
+                        <option v-for="m in models" :key="m.value"  :value="m.value">{{m.name}}</option>
+                       
+                    </select>
+                    -->
+                    <select class="form-select _form-select-sm" style="width: 150px;" v-model="selectedMode">
+                        <option value="chat">Chat</option>
+                        <option value="readonly">Agent (Read Only)</option>
+                        <option value="agent">Agent (Read/Write)</option>
+                    </select>
+                    <div>
+                        <div v-if="isThinking" class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div v-else>
+                            <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                        </div>
                     </div>
                 </div>
                 <div v-if="message" class="bg-warning p-2" >
@@ -93,21 +116,40 @@
                 </div>
             </div>
         </div>
-        <div v-else class="row position-fixed bottom-0 bg-white pt-2 pb-2" style="z-index: 1000;width: 860px;">
-            <div class="d-flex gap-2">
-                <input class="form-control" v-model="userInput" @keyup.enter="sendMessage(false)" :disabled="isThinking || tool" placeholder="Type your message..." />
-                
-                <div v-if="isThinking" class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+        <div v-else class="row position-fixed bottom-0 bg-white p-2 gap-2" style="z-index: 1000;width: 860px;">
+            <div class="card card-body">
+                <div class="d-flex gap-2">
+                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />                                    
                 </div>
-                <div v-else>
-                    <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                <div class="d-flex gap-2 pt-2 justify-content-end">
+                  
+                    <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
+                        <option value="">No instructions</option>
+                        <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
+                       
+                    </select>
+                    <select class="form-select _form-select-sm w-25" v-model="selectedMode">
+                        <option value="chat">Chat</option>
+                        <option value="readonly">Agent (Read Only)</option>
+                        <option value="agent">Agent (Read/Write)</option>
+                    </select>
+                    <div>
+                        <div v-if="isThinking" class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div v-else>
+                            <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div v-if="message" class="bg-warning p-2" >
+
+            <div v-if="message" class="bg-warning p-2 m-2 col" >
                 {{message}}
             </div>
         </div>
+    </div>
+    <ai-settings ref="settings" v-if="settings" @close="closeSettings" />
     </div>
 </template>
 
@@ -115,15 +157,17 @@
 import AIChatService from "../aiChatService";
 import VueMarkdown from 'vue-markdown-it';
 import Prism from "prismjs";
+import AISettings from "./AISettings.vue";
 
 export default {
     mounted() {
         window.Prism = window.Prism || {};
         window.Prism.manual = true;
-        
+        this.loadInfo();
     },
     components: {
-        VueMarkdown
+        VueMarkdown,
+        'ai-settings': AISettings
     },
     data() {
         return {
@@ -135,11 +179,43 @@ export default {
             aMessages: [],
             aResponse:{},
             tool:null,
-            toolMore:false,
-            isReadOnly:true
+            toolMore:false,            
+            selectedMode:'readonly',
+            settings:false,
+            rules:[],
+            models:[],
+            selectedModel:'claude-3-5-sonnet-latest',
+            selectedRule:'',
+            totalPrice:0,
+            totalInputTokens:0,
+            totalOutputTokens:0,
+            cacheCreationInputTokens:0,
+            cacheReadInputTokens:0
         };
     },
     methods: {
+        loadInfo() {
+            this.isThinking = true;
+            AIChatService.getInfo(data => {
+                if (data.success) {
+                    this.models = data.models || '';
+                    this.rules = data.rules || [];
+                } else {
+                    this.message = data.message;
+                }
+                this.isThinking = false;
+            }, this.errorCallback);
+        },
+        goSettings(){
+            this.settings = true;
+            this.$nextTick(() => {
+                this.$refs.settings.loadSettings();
+            });
+        },
+        closeSettings(){
+            this.settings=false;
+            this.loadInfo();
+        },
         clear() {
             this.messages = [];
             this.message = '';
@@ -175,14 +251,14 @@ export default {
             this.toolMore = false;
             this.isThinking = true;
 
-            AIChatService.ChatWithTools2({ 
+            AIChatService.ChatWithTools({ 
                 messages : this.messages,
                 aMessages: this.aMessages,
                 aResponse: this.aResponse,
                 runTool: runTool,
                 toolUse: runTool ? this.tool.toolUse : null,
-                isReadOnly: this.isReadOnly
-
+                mode: this.selectedMode,
+                rules: this.selectedRule
             }, data => {
                 this.isThinking = false;
                 if (data.success) {
@@ -193,6 +269,11 @@ export default {
                     this.aMessages = data.aMessages;
                     this.aResponse = data.aResponse;
                     this.tool = data.tool;
+                    this.totalPrice = data.totalPrice;
+                    this.totalInputTokens = data.totalInputTokens;
+                    this.totalOutputTokens = data.totalOutputTokens;
+                    this.cacheCreationInputTokens = data.cacheCreationInputTokens;
+                    this.cacheReadInputTokens = data.cacheReadInputTokens;
                     this.$nextTick(() => {
                         Prism.highlightAll();
                     });

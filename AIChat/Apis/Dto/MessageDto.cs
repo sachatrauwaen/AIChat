@@ -21,5 +21,20 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
         public string ToolFullname { get;  set; }
 
         public List<ContentDto> AContent { get; set; }
+
+        [JsonProperty("inputTokens")]
+        public int InputTokens { get; set; }
+
+        [JsonProperty("outputTokens")]
+        public int OutputTokens { get; set; }
+
+        [JsonProperty("price")]
+        public string Price { get; set; }
+
+        [JsonProperty("cacheCreationInputTokens")]
+        public int CacheCreationInputTokens { get; set; }
+
+        [JsonProperty("cacheReadInputTokens")]
+        public int CacheReadInputTokens { get; set; }
     }
 }
