@@ -1,4 +1,5 @@
 ﻿using AnthropicClient.Models;
+using DotNetNuke.Framework.Reflections;
 using DotNetNuke.Instrumentation;
 using Satrabel.AIChat.Tools;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.UI;
 
 namespace Satrabel.AIChat.Services
 {
@@ -14,13 +16,18 @@ namespace Satrabel.AIChat.Services
         private List<Tool> readOnlyTools = new[] {
                     Tool.CreateFromClass<GetModulesTool>( ),
                     Tool.CreateFromClass<GetModuleTool>( ),
-                    Tool.CreateFromClass<GetPagesTool>(),
+                    //Tool.CreateFromClass<GetPagesTool>(),
+                    //ToolCreate(new GetPagesTool()),
                     Tool.CreateFromClass<GetHtmlTool>(),
                     Tool.CreateFromClass<GetFoldersTool>(),
                     Tool.CreateFromClass<GetFilesTool>(),
                     Tool.CreateFromClass<ReadFileTool>(new EphemeralCacheControl()),
                     }.ToList();
 
+        private static Tool ToolCreate(IAITool tool)
+        {
+            return Tool.CreateFromInstanceMethod(tool.Name, tool.Description, tool,  tool.Function.Name);
+        }
 
         private List<Tool> writeTools = new[] {
                     Tool.CreateFromClass<SetModuleTool>(),
@@ -38,8 +45,39 @@ namespace Satrabel.AIChat.Services
 
         public ToolsService(ILog logger)
         {
-            allTools.AddRange(readOnlyTools);
+            
             allTools.AddRange(writeTools);
+            allTools.AddRange(readOnlyTools);
+
+            var tools = GetTools();
+            foreach (var tool in tools)
+            {
+                try
+                {
+                    var t = ToolCreate(tool);                    
+                    if (!allTools.Any(t2 => t2.Name == t.Name))
+                    {
+                        if (tool.ReadOnly)
+                        {
+                            readOnlyTools.Add(t);
+                        }
+                        else
+                        {
+                            writeTools.Add(t);
+                        }
+                        allTools.Add(t);
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.Error($"Error creating tool {tool.GetType().FullName}: {e.Message}", e);
+                }
+            }
+            var lastTool = readOnlyTools.LastOrDefault();
+            if (lastTool!= null)
+            {
+                lastTool.CacheControl = new EphemeralCacheControl();
+            }
             Logger = logger;
         }
 
@@ -90,6 +128,36 @@ namespace Satrabel.AIChat.Services
                 toolResultContent = toolCallResult.Error.Message;
             }
             return toolResultContent;
+        }
+
+        private IEnumerable<IAITool> GetTools()
+        {
+            var typeLocator = new TypeLocator();
+            IEnumerable<Type> types = typeLocator.GetAllMatchingTypes(IsValidToolProvider);
+
+            foreach (Type filterType in types)
+            {
+                IAITool filter;
+                try
+                {
+                    filter = Activator.CreateInstance(filterType) as IAITool;
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Unable to create {filterType.FullName} while GetDatasources. {e.Message}");
+                    filter = null;
+                }
+
+                if (filter != null)
+                {
+                    yield return filter;
+                }
+            }
+        }
+
+        private static bool IsValidToolProvider(Type t)
+        {
+            return t != null && t.IsClass && !t.IsAbstract && t.IsVisible && typeof(IAITool).IsAssignableFrom(t);
         }
 
     }

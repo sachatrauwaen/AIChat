@@ -1,36 +1,27 @@
-# DNN PersonaBar AI Chat Extension (Vue.js + Anthropic)
+# DNN PersonaBar AI Chat Extension 
 
 This extension adds an AI-powered chat to the DNN PersonaBar, using a Vue.js frontend and the Anthropic SDK for C#.
+You need to set up an Anthropic account and obtain an API key to use this extension.
 
-## Structure
+Beta version, not yet ready for production.
+Make a backup before use.
 
-```
-/AIChat/                  # C# backend (class library)
-/DesktopModules/Admin/AIChat/  # Vue.js frontend build output
-AIChat.dnn                # DNN manifest
-```
+#Features
+
+- Chat with your DNN portal.
+- There are some tools available to help you with your DNN portal, like getting the current user, the current page, etc.
+- Ability to add your own Tools by implemnting : IAITool	
 
 ## Backend (C#)
 - Implements a PersonaBar menu and a Web API controller that proxies chat requests to Anthropic.
-- Uses [Anthropic.SDK](https://github.com/tghamm/Anthropic.SDK) (install via NuGet).
+
 
 ## Frontend (Vue.js)
 - Simple chat UI that calls the backend API.
-- Built with Vite, output goes to `/DesktopModules/Admin/AIChat/`.
-
-## Setup Steps
-
-1. **Build the C# project** in `/AIChat/` and copy the DLL to your DNN site's `/bin/`.
-2. **Build the Vue app** and copy the output to `/DesktopModules/Admin/AIChat/` in your DNN site.
-3. **Copy `AIChat.dnn`** to your DNN site's `/Install/Module/` or root.
-4. **Install the extension** via DNN's Extensions page.
-5. **Set your Anthropic API key** as an environment variable (`ANTHROPIC_API_KEY`) or in your config.
+- Built with Vite
 
 ## Usage
 - Log in as Host/SuperUser.
 - Open the PersonaBar and select "AI Chat".
 - Start chatting with Claude via Anthropic!
 
----
-
-For more details, see the code comments and manifest. 

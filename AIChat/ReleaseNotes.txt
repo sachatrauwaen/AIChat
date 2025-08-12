@@ -3,6 +3,6 @@
 	Satrabel <br />
 	<a href="mailto:info@satrabel.be">info@satrabel.be</a><br />
 	<a href="http://www.satrabel.be">http://www.satrabel.be</a><br />
-	<a href="https://github.com/sachatrauwaen/OpenContent/releases">github.com/sachatrauwaen/OpenContent/releases</a><br />
+	<a href="https://github.com/sachatrauwaen/AIChat/releases">github.com/sachatrauwaen/AIChat/releases</a><br />
 </p>
 <hr/>

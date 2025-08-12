@@ -25,5 +25,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("model")]
         public string Model { get; set; }
+
+        [JsonProperty("tools")]
+        public List<ToolDto> Tools { get; set; }
     }
 }

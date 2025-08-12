@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetPagesTool : ITool
+    public class GetPagesTool : ITool, IAITool
     {
         public string Name => "Get Pages";
 
@@ -23,7 +23,9 @@ namespace Satrabel.AIChat.Tools
 
         public MethodInfo Function => typeof(GetPagesTool).GetMethod(nameof(GetPages));
 
-        public static string GetPages()
+        public bool ReadOnly => true;
+
+        public string GetPages()
         {
             var tc = new TabController();
             var tabs = tc.GetTabsByPortal(PortalSettings.Current.PortalId);

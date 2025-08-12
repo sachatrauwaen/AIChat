@@ -40,39 +40,56 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         // private readonly string _apiKey = "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"; // API key from env/config
         private const string APIKEY_SETTING = "AIChat_ApiKey";
         private const string MODEL_SETTING = "AIChat_Model";
+        private const string TOOLS_SETTING = "AIChat_Tools";
 
         [HttpGet]
         public async Task<SettingsDto> GetSettings()
         {
             var res = new SettingsDto();
-            if (!string.IsNullOrEmpty(GetApiKey()))
+            try
             {
-                AnthropicService anthropicService = new AnthropicService(GetApiKey(), Logger, AnthropicModels.Claude35Haiku20241022);
-                res.Models = await anthropicService.GetModelsAsync();
-            }
-            else
-            {
-                res.Models = new List<ModelDto> { new ModelDto { Value = AnthropicModels.Claude35Sonnet20241022, Name = "Claude 3.5 Sonnet" } };
-            }
-            res.ApiKey = PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
-            res.Model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, AnthropicModels.Claude35Sonnet20241022);
-
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
-            res.GlobalRules = File.ReadAllText(Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "airules.md"));
-            if (Directory.Exists(rulesPath))
-            {
-                res.Rules = Directory.GetFiles(rulesPath).Select(f => new RuleDto
+                var apiKey = PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
+                if (!string.IsNullOrEmpty(apiKey))
                 {
-                    Name = Path.GetFileNameWithoutExtension(f),
-                    Rule = File.ReadAllText(f)
+                    AnthropicService anthropicService = new AnthropicService(apiKey, Logger, AnthropicModels.Claude35Haiku20241022);
+                    res.Models = await anthropicService.GetModelsAsync();
+                }
+                else
+                {
+                    res.Models = new List<ModelDto> { new ModelDto { Value = AnthropicModels.Claude35Sonnet20241022, Name = "Claude 3.5 Sonnet" } };
+                }
+                res.ApiKey = apiKey;
+                res.Model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, AnthropicModels.Claude35Sonnet20241022);
+                var tools = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "").Split(',').ToList();
+                res.Tools = new ToolsService(Logger).GetAllTools().Select(t => new ToolDto
+                {
+                    Name = t.Name,
+                    Description = t.Description,
+                    Active = tools.Contains(t.Name) || string.IsNullOrEmpty(GetApiKey()), // if no API key, all tools are active
                 }).ToList();
+
+                var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+                res.GlobalRules = File.ReadAllText(Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "airules.md"));
+                if (Directory.Exists(rulesPath))
+                {
+                    res.Rules = Directory.GetFiles(rulesPath).Select(f => new RuleDto
+                    {
+                        Name = Path.GetFileNameWithoutExtension(f),
+                        Rule = File.ReadAllText(f)
+                    }).ToList();
+                }
+                else
+                {
+                    Directory.CreateDirectory(rulesPath);
+                }
+                res.Success = true;
             }
-            else
+            catch (Exception ex)
             {
-                Directory.CreateDirectory(rulesPath);
+                res.Message = ex.Message;
+                res.Success = false;
             }
 
-            res.Success = true;
             return res;
         }
 
@@ -87,6 +104,10 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             if (!string.IsNullOrEmpty(request.Model))
             {
                 PortalController.UpdatePortalSetting(PortalId, MODEL_SETTING, request.Model);
+            }
+            if (request.Tools != null)
+            {
+                PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
             }
             File.WriteAllText(Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "airules.md"), request.GlobalRules);
             var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
@@ -112,7 +133,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         public async Task<InfoDto> GetInfo()
         {
             var res = new InfoDto();
-
             var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
             if (Directory.Exists(rulesPath))
             {
@@ -121,35 +141,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     .ToList();
             }
             res.Success = true;
-
-            /*
-            AnthropicService anthropicService = new AnthropicService(GetApiKey(), Logger);
-            res.Models = new List<ModelDto>(new ModelDto[] {
-                new ModelDto{
-                    Name= "Sonnet 3.5",
-                    Value =AnthropicModels.Claude35SonnetLatest
-                },
-                new ModelDto{
-                    Name= "Haiku 3.5",
-                    Value =AnthropicModels.Claude35HaikuLatest
-                },
-                new ModelDto{
-                    Name= "Sonnet 3.7",
-                    Value ="claude-3-7-sonnet-latest"
-                },
-            });
-            */
             return res;
         }
-
-
 
         /// <summary>
         /// Chat endpoint that uses tools to perform calculations.
         /// </summary>
         /// <remarks>
         /// This endpoint demonstrates the use of tools with Claude AI.
-
         /// </remarks>
         /// <param name="request">Chat request containing the user message</param>
         /// <returns>Response with the AI's message after tool execution</returns>
@@ -159,13 +158,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         {
             if (string.IsNullOrEmpty(GetApiKey()))
             {
-                return new ChatResponse() { 
+                return new ChatResponse()
+                {
                     Success = false,
                     Message = "ApiKey missing (goto settings)"
                 };
             }
 
-                ToolsService toolsService = new ToolsService(Logger);
+            ToolsService toolsService = new ToolsService(Logger);
             var model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, AnthropicModels.Claude35Sonnet20241022);
 
             AnthropicService anthropicService = new AnthropicService(GetApiKey(), Logger, model);
@@ -173,13 +173,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             try
             {
                 var dtos = request.Messages;
-                /*
-                if (!request.RunTool && dtos.Any() && dtos.Last().AContent?.Any(c => c.Type == "tool_use") == true)
-                {
-                    dtos.RemoveAt(dtos.Count - 1);
-                }
-                */
-
                 // Remove tool use results longer than 1000 chars
                 foreach (var msg in dtos)
                 {
@@ -195,46 +188,13 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                         }
                     }
                 }
-
-                //List<Message> messages = request.Messages.Select(m => new Message(
-                //  m.Role,
-                //  GetContent(m)
-                //)).ToList();
-
                 string systemPrompt = GenerateSystemPrompt(request);
-
                 AnthropicResult<MessageResponse> response;
                 if (request.RunTool) // run tools
                 {
                     var toolCall = toolsService.GetToolCall(request.ToolUse);
                     var tool = toolCall.ToolUse.ToText();
-                    /*
-                    var toolCallResult = await toolCall.InvokeAsync<string>();
-                    string toolResultContent;
-
-                    if (toolCallResult.IsSuccess && toolCallResult.Value != null)
-                    {
-                        Logger.Info(toolCallResult.Value);
-                        toolResultContent = toolCallResult.Value;
-                    }
-                    else
-                    {
-                        Logger.Error(toolCallResult.Error.Message);
-                        toolResultContent = toolCallResult.Error.Message;
-                    }
-                    */
                     var toolResultContent = await toolsService.InvokeAsync(toolCall);
-                    //messages.Add(
-                    //      new AnthropicClient.Models.Message(
-                    //        MessageRole.User,
-                    //        new List<Content> {
-                    //          new ToolResultContent(
-                    //              toolCall.ToolUse.Id,
-                    //              toolResultContent
-                    //            )}
-                    //      )
-                    //    );
-
                     dtos.Add(new MessageDto
                     {
                         Role = MessageRole.User,
@@ -250,23 +210,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                               }
                         }
                     });
-                    /*
-                    response = await client.CreateMessageAsync(new MessageRequest(
-                      AnthropicModels.Claude35Sonnet,
-                      messages,
-                      tools: GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools()),
-                      system: systemPrompt
-                    ));
-
-                    if (!response.IsSuccess)
-                    {
-                        Logger.Error("Failed to create message");
-                        Logger.ErrorFormat("Error Type: {0}", response.Error.Error.Type);
-                        Logger.ErrorFormat("Error Message: {0}", response.Error.Error.Message);
-                        throw new Exception($"Failed to create message: {response.Error.Error.Message}");
-                    }
-                    */
-
                     response = await anthropicService.CreateMessageAsync(
                          messages: dtos,
                          tools: GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools()),
@@ -277,22 +220,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     var cacheCreationInputTokens = response.Value.Usage.CacheCreationInputTokens;
                     var cacheReadInputTokens = response.Value.Usage.CacheReadInputTokens;
                     var outputTokens = response.Value.Usage.OutputTokens;
-                    decimal price = inputTokens * 3 / 1000000
-                                    + outputTokens * 15 / 1000000
-                                    + cacheCreationInputTokens * 3.75m / 1000000
-                                    + cacheReadInputTokens * 0.3m / 1000000;
+                    decimal price = inputTokens * GetPricePerInputToken(model) / 1000000m
+                                    + outputTokens * GetPricePerOutputToken(model) / 1000000m
+                                    + cacheCreationInputTokens * GetPricePerCacheCreationInputToken(model) / 1000000m
+                                    + cacheReadInputTokens * GetPricePerCacheReadInputToken(model) / 1000000m;
 
-                    /*
-                    foreach (var content in response.Value.Content)
-                    {
-                        switch (content)
-                        {
-                            case TextContent textContent:
-                                Logger.Info(textContent.Text);
-                                break;
-                        }
-                    }
-                    */
+
                     // messages.Add(new Message(MessageRole.Assistant, response.Value.Content));
                     dtos.Add(new MessageDto
                     {
@@ -309,22 +242,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 }
                 else
                 {
-                    /*
-                    response = await client.CreateMessageAsync(new MessageRequest(
-                     AnthropicModels.Claude35Sonnet,
-                     messages,
-                     system: systemPrompt,
-                     tools: GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools())
-                   ));
-
-                    if (!response.IsSuccess)
-                    {
-                        Logger.Error("Failed to create message");
-                        Logger.ErrorFormat("Error Type: {0}", response.Error.Error.Type);
-                        Logger.ErrorFormat("Error Message: {0}", response.Error.Error.Message);
-                        throw new Exception($"Failed to create message: {response.Error.Error.Message}");
-                    }
-                    */
                     response = await anthropicService.CreateMessageAsync(
                         messages: dtos,
                         tools: GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools()),
@@ -335,8 +252,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     var outputTokens = response.Value.Usage.OutputTokens;
                     var cacheCreationInputTokens = response.Value.Usage.CacheCreationInputTokens;
                     var cacheReadInputTokens = response.Value.Usage.CacheReadInputTokens;
-                    decimal price = inputTokens * 3 / 1000000 + outputTokens * 15 / 1000000;
-                    // messages.Add(new Message(MessageRole.Assistant, response.Value.Content));
+                    
+                    decimal price = inputTokens * GetPricePerInputToken(model) / 1000000m
+                                    + outputTokens * GetPricePerOutputToken(model) / 1000000m
+                                    + cacheCreationInputTokens * GetPricePerCacheCreationInputToken(model) / 1000000m
+                                    + cacheReadInputTokens * GetPricePerCacheReadInputToken(model) / 1000000m;
+
                     dtos.Add(new MessageDto
                     {
                         Role = MessageRole.Assistant,
@@ -349,20 +270,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                         CacheReadInputTokens = cacheReadInputTokens,
                         Price = $"${price.ToString("0.00000")} ({inputTokens} input / {outputTokens} output tokens)"
                     });
-                    /*
-                    foreach (var content in response.Value.Content)
-                    {
-                        switch (content)
-                        {
-                            case TextContent textContent:
-                                Logger.Info(textContent.Text);
-                                break;
-                            case ToolUseContent toolUseContent:
-                                Logger.Info(toolUseContent.Name);
-                                break;
-                        }
-                    }
-                    */
                 }
 
                 if (response.Value.ToolCall != null)
@@ -379,10 +286,10 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 var totalOutputTokens = dtos.Sum(d => d.OutputTokens);
                 var totalCacheCreationInputTokens = dtos.Sum(d => d.CacheCreationInputTokens);
                 var totalCacheReadInputTokens = dtos.Sum(d => d.CacheReadInputTokens);
-                decimal totalPrice = totalInputTokens * 3 / 1000000m
-                                    + totalOutputTokens * 15 / 1000000m
-                                    + totalCacheCreationInputTokens * 3.75m / 1000000m
-                                    + totalCacheReadInputTokens * 0.3m / 1000000m;
+                decimal totalPrice = totalInputTokens * GetPricePerInputToken(model) / 1000000m
+                                    + totalOutputTokens * GetPricePerOutputToken(model) / 1000000m
+                                    + totalCacheCreationInputTokens * GetPricePerCacheCreationInputToken(model) / 1000000m
+                                    + totalCacheReadInputTokens * GetPricePerCacheReadInputToken(model) / 1000000m;
 
                 return new ChatResponse
                 {
@@ -407,6 +314,86 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 };
             }
         }
+        private decimal GetPricePerInputToken(string model)
+        {
+            model = model.ToLower();
+            if (model.Contains("sonnet"))
+            {
+                return 3m;
+            }
+            else if (model.Contains("haiku"))
+            {
+                return 0.8m;
+            }
+            else if (model.Contains("opus"))
+            {
+                return 15m;
+            }
+            else
+            {
+                return 0m;
+            }
+        }
+        private decimal GetPricePerCacheCreationInputToken(string model)
+        {
+            model = model.ToLower();
+            if (model.Contains("sonnet"))
+            {
+                return 3.75m;
+            }
+            else if (model.Contains("haiku"))
+            {
+                return 1m;
+            }
+            else if (model.Contains("opus"))
+            {
+                return 18.75m;
+            }
+            else
+            {
+                return 0m;
+            }
+        }
+        private decimal GetPricePerCacheReadInputToken(string model)
+        {
+            model = model.ToLower();
+            if (model.Contains("sonnet"))
+            {
+                return 0.3m;
+            }
+            else if (model.Contains("haiku"))
+            {
+                return 0.08m;
+            }
+            else if (model.Contains("opus"))
+            {
+                return 1.5m;
+            }
+            else
+            {
+                return 0m;
+            }
+        }
+        private decimal GetPricePerOutputToken(string model)
+        {
+            model = model.ToLower();
+            if (model.Contains("sonnet"))
+            {
+                return 15m;
+            }
+            else if (model.Contains("haiku"))
+            {
+                return 4m;
+            }
+            else if (model.Contains("opus"))
+            {
+                return 75m;
+            }
+            else
+            {
+                return 0m;
+            }
+        }
 
         private string GenerateSystemPrompt(ChatToolRequest request)
         {
@@ -424,18 +411,18 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var airules = string.Empty;
             if (File.Exists(airulesFilename))
             {
-                airules = File.ReadAllText(airulesFilename);
+                airules = "<global>" + File.ReadAllText(airulesFilename)+ "</global>";
             }
             else
             {
-                File.WriteAllText(airulesFilename, "# ai rules");
+                File.WriteAllText(airulesFilename, "# global rules");
             }
             if (!string.IsNullOrEmpty(request.Rules))
             {
                 var rulesPath = ps.HomeSystemDirectoryMapPath + "airules\\" + request.Rules + ".md";
                 if (File.Exists(rulesPath))
                 {
-                    airules += "\n" + File.ReadAllText(rulesPath);
+                    airules += $"\n<{request.Rules}>" + File.ReadAllText(rulesPath)+ $"</{request.Rules}>";
                 }
             }
             var systemPrompt = $"{hostContext} \n {portalcontext} \n {airules}";
@@ -445,19 +432,18 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         private string GetApiKey()
         {
             return PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
-
-            //return _apiKey;
         }
 
-        private static List<Tool> GetTools(ChatToolRequest request, List<Tool> readOnlyTools, List<Tool> allTools)
+        private List<Tool> GetTools(ChatToolRequest request, List<Tool> readOnlyTools, List<Tool> allTools)
         {
+            var tools = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "").Split(',').ToList();
             if (request.Mode == "readonly")
             {
-                return readOnlyTools;
+                return readOnlyTools.Where(t => tools.Contains(t.Name)).ToList();
             }
             else if (request.Mode == "agent")
             {
-                return allTools;
+                return allTools.Where(t => tools.Contains(t.Name)).ToList();
             }
             else
             {
@@ -491,7 +477,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         }
 
 
-
+        /*
         /// <summary>
         /// Creates messages with the system instruction for markdown formatting based on user preferences
         /// </summary>
@@ -533,5 +519,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             //    new Message { Role = "user", Content = userMessage }
             //};
         }
+        */
     }
 }

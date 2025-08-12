@@ -23,7 +23,7 @@
 	<!-- Copy files into Website's bin folder -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.AIChat.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.AIChat.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
-	<Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\AnthropicClient.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+	<Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.AnthropicClient.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
 
 	  <!-- Copy files into Website's module folder -->
     <ItemGroup>

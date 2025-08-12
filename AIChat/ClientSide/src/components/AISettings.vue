@@ -29,6 +29,13 @@
                 </select>
             </div>
             <div class="mb-4">
+                <label class="form-label">Activated tools</label>
+                <div v-for="tool in tools" :key="tool.name" class="mb-2">
+                    <input type="checkbox" v-model="tool.active" :id="tool.name">
+                    <label :for="tool.name" class="ps-2">{{tool.name}} : {{tool.description}}</label>
+                </div>
+            </div>
+            <div class="mb-4">
                 <label for="globalRules" class="form-label">Global instructions</label>
                 <textarea 
                             class="form-control" 
@@ -39,7 +46,7 @@
             </div>
             <!-- Rules Management -->
             <div class="mb-4">
-                <label class="form-label">Specific Instructions</label><br />
+                <label class="form-label">Specific rules</label><br />
                 <div v-for="(rule, index) in rules" :key="index" class="mb-3">
                     <div class="d-flex gap-2 mb-2">
                         <input type="text" class="form-control" v-model="rule.name" 
@@ -114,7 +121,8 @@ export default {
             isThinking: false,
            globalRules: '',
            models: [],
-           model: ''
+           model: '',
+           tools: []
         };
     },
     methods: {
@@ -133,6 +141,7 @@ export default {
                     this.models = data.models || [];
                     this.rules = data.rules || [];
                     this.globalRules= data.globalRules || '';
+                    this.tools = data.tools || [];
                 } else {
                     this.message = data.message;
                 }
@@ -145,7 +154,8 @@ export default {
                 apiKey: this.apiKey,
                 model: this.model,
                 rules: this.rules,
-                globalRules: this.globalRules
+                globalRules: this.globalRules,
+                tools: this.tools
             }, data => {
                 this.isThinking = false;
                 if (data.success) {

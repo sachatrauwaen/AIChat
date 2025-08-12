@@ -87,7 +87,7 @@
                 <div class="d-flex gap-2 pt-2 justify-content-end">
                     
                     <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
-                        <option value="">No instructions</option>
+                        <option value="">No rule</option>
                         <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
                        
                     </select>
@@ -122,7 +122,10 @@
                     <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />                                    
                 </div>
                 <div class="d-flex gap-2 pt-2 justify-content-end">
-                  
+                    <div class="d-flex gap-2 text-danger" v-if="selectedMode === 'agent'">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span>In Read/Write mode, AI can make modification to your system. Use with caution.</span>
+                    </div>
                     <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
                         <option value="">No instructions</option>
                         <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>

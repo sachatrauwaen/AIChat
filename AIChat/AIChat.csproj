@@ -130,6 +130,7 @@
     <Compile Include="Apis\Dto\ToolResponse.cs" />
     <Compile Include="Apis\Dto\InfoDto.cs" />
     <Compile Include="Apis\Dto\ModelDto.cs" />
+    <Compile Include="Apis\Dto\ToolDto.cs" />
     <Compile Include="History\ChatConversation.cs" />
     <Compile Include="History\ChatHistoryManager.cs" />
     <Compile Include="History\ChatMessage.cs" />
@@ -150,11 +151,7 @@
     <Compile Include="Services\AnthropicService.cs" />
     <Compile Include="Services\IAIChatTool.cs" />
     <Compile Include="Services\ToolsService.cs" />
-    <Compile Include="Services_old\AnthropicClient.cs" />
-    <Compile Include="Services_old\AnthropicModels.cs" />
-    <Compile Include="Services_old\ConversationResponse.cs" />
     <Compile Include="Apis\Dto\MessageDto.cs" />
-    <Compile Include="Services_old\MessageParameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools\AddModule.cs" />
     <Compile Include="Tools\AddPage.cs" />
@@ -163,6 +160,7 @@
     <Compile Include="Tools\GetFolders.cs" />
     <Compile Include="Tools\GetPage.cs" />
     <Compile Include="Tools\GetSystemFiles.cs" />
+    <Compile Include="Tools\IAITool.cs" />
     <Compile Include="Tools\ReadFile.cs" />
     <Compile Include="Tools\ReadSystemFile.cs" />
     <Compile Include="Tools\SetModule.cs" />
@@ -209,6 +207,8 @@
     <Content Include="ClientSide\src\main.js" />
     <Content Include="ClientSide\vue.config.js" />
     <Content Include="css\AIChat.css" />
+    <Content Include="License.txt" />
+    <Content Include="ReleaseNotes.txt" />
     <Content Include="scripts\AIChat.js" />
     <Content Include="scripts\bundles\index.html" />
     <Content Include="scripts\bundles\js\app.js" />
