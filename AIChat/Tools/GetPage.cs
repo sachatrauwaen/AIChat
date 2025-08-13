@@ -33,20 +33,13 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "Error: Invalid page ID";
                 }
-
-                // Get the portal ID
                 var portalId = PortalSettings.Current.PortalId;
-
                 var pagesController = PagesController.Instance;
-
-                // Get page settings
-                var pageSettings = pagesController.GetPageSettings(pageId);
+                var pageSettings = pagesController.GetPageSettings(pageId, PortalSettings.Current);
                 if (pageSettings == null)
                 {
                     return $"Error: Could not retrieve settings for page with ID {pageId}";
                 }
-
-                // Convert to JSON and return
                 var pageJson = JsonConvert.SerializeObject(pageSettings, Formatting.Indented);
                 return pageJson;
             }
@@ -68,28 +61,19 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "Error: Page name cannot be empty";
                 }
-
-                // Get the portal ID
                 var portalId = PortalSettings.Current.PortalId;
-
-                // Check if the page exists
                 var tabController = new TabController();
                 var existingTab = tabController.GetTabByName(pageName, portalId);
                 if (existingTab == null || existingTab.IsDeleted)
                 {
                     return $"Error: Page with name '{pageName}' does not exist or is deleted";
                 }
-
                 var pagesController = PagesController.Instance;
-
-                // Get page settings
                 var pageSettings = pagesController.GetPageSettings(existingTab.TabID);
                 if (pageSettings == null)
                 {
                     return $"Error: Could not retrieve settings for page with name {pageName}";
                 }
-
-                // Convert to JSON and return
                 var pageJson = JsonConvert.SerializeObject(pageSettings, Formatting.Indented);
                 return pageJson;
             }

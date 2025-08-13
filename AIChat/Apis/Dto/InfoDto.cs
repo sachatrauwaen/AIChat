@@ -12,6 +12,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         public bool Success { get; set; }
 
         [JsonProperty("models")]
-        public List<ModelDto> Models { get; set; }
+        public List<ModelDto> Models { get; set; }  
+
+        [JsonProperty("autoReadonlyTools")]
+        public bool AutoReadonlyTools { get; set; }
+
+        [JsonProperty("autoWriteTools")]
+        public bool AutoWriteTools { get; set; }
     }
 }

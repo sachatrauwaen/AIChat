@@ -17,7 +17,15 @@
                     placeholder="Enter your API key">
                     <a href="https://console.anthropic.com" target="_blank">Get Anthropic API key</a>
             </div>
-
+            <div class="mb-4">                
+                <label for="maxTokens" class="form-label">Max Tokens to Generate</label>
+                <input 
+                    type="number" 
+                    class="form-control" 
+                    id="maxTokens" 
+                    v-model="maxTokens" 
+                    >
+            </div>
             <div class="mb-4">
                 <label for="model" class="form-label">Model</label>
                 <select 
@@ -33,6 +41,17 @@
                 <div v-for="tool in tools" :key="tool.name" class="mb-2">
                     <input type="checkbox" v-model="tool.active" :id="tool.name">
                     <label :for="tool.name" class="ps-2">{{tool.name}} : {{tool.description}}</label>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Automatic execution of tools</label>
+                <div class="mb-2">
+                    <input type="checkbox" v-model="autoReadonlyTools" :id="autoReadonlyTools">
+                    <label :for="autoReadonlyTools" class="ps-2">Readonly tools</label>
+                </div>
+                <div class="mb-2">
+                    <input type="checkbox" v-model="autoWriteTools" :id="autoWriteTools">
+                    <label :for="autoWriteTools" class="ps-2">Write tools</label>
                 </div>
             </div>
             <div class="mb-4">
@@ -122,7 +141,9 @@ export default {
            globalRules: '',
            models: [],
            model: '',
-           tools: []
+           tools: [],
+           autoReadonlyTools: false,
+           autoWriteTools: false
         };
     },
     methods: {
@@ -142,6 +163,9 @@ export default {
                     this.rules = data.rules || [];
                     this.globalRules= data.globalRules || '';
                     this.tools = data.tools || [];
+                    this.maxTokens = data.maxTokens || 1024;
+                    this.autoReadonlyTools = data.autoReadonlyTools || false;
+                    this.autoWriteTools = data.autoWriteTools || false;
                 } else {
                     this.message = data.message;
                 }
@@ -155,12 +179,14 @@ export default {
                 model: this.model,
                 rules: this.rules,
                 globalRules: this.globalRules,
-                tools: this.tools
+                tools: this.tools,
+                maxTokens: this.maxTokens,
+                autoReadonlyTools: this.autoReadonlyTools,
+                autoWriteTools: this.autoWriteTools
             }, data => {
                 this.isThinking = false;
                 if (data.success) {
-                    this.message = 'Settings saved successfully';
-                    
+                    this.message = 'Settings saved successfully';                    
                 } else {
                     this.message = data.message;
                 }

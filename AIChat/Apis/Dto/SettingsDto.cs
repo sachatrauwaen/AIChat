@@ -28,5 +28,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("tools")]
         public List<ToolDto> Tools { get; set; }
+
+        [JsonProperty("maxTokens")]
+        public int MaxTokens { get; set; }
+
+        [JsonProperty("autoReadonlyTools")]
+        public bool AutoReadonlyTools { get; set; }
+
+        [JsonProperty("autoWriteTools")]
+        public bool AutoWriteTools { get; set; }
     }
 }

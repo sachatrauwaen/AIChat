@@ -15,22 +15,22 @@ namespace Satrabel.AIChat.Services
     {
         private List<Tool> readOnlyTools = new[] {
                     Tool.CreateFromClass<GetModulesTool>( ),
-                    Tool.CreateFromClass<GetModuleTool>( ),
+                    Tool.CreateFromClass<GetHTMLModuleTool>( ),
                     //Tool.CreateFromClass<GetPagesTool>(),
-                    //ToolCreate(new GetPagesTool()),
+                    //ToolCreate(new GetPagesTool()),                    
                     Tool.CreateFromClass<GetHtmlTool>(),
                     Tool.CreateFromClass<GetFoldersTool>(),
                     Tool.CreateFromClass<GetFilesTool>(),
                     Tool.CreateFromClass<ReadFileTool>(new EphemeralCacheControl()),
                     }.ToList();
 
-        private static Tool ToolCreate(IAITool tool)
+        private static Tool ToolCreate(IAIChatTool tool)
         {
             return Tool.CreateFromInstanceMethod(tool.Name, tool.Description, tool,  tool.Function.Name);
         }
 
         private List<Tool> writeTools = new[] {
-                    Tool.CreateFromClass<SetModuleTool>(),
+                    Tool.CreateFromClass<SetHTMLModuleTool>(),
                     Tool.CreateFromClass<SendEmailTool>(),
                     Tool.CreateFromClass<WriteFileTool>(),
                     Tool.CreateFromClass<AddPageTool>(),
@@ -130,21 +130,21 @@ namespace Satrabel.AIChat.Services
             return toolResultContent;
         }
 
-        private IEnumerable<IAITool> GetTools()
+        private IEnumerable<IAIChatTool> GetTools()
         {
             var typeLocator = new TypeLocator();
             IEnumerable<Type> types = typeLocator.GetAllMatchingTypes(IsValidToolProvider);
 
             foreach (Type filterType in types)
             {
-                IAITool filter;
+                IAIChatTool filter;
                 try
                 {
-                    filter = Activator.CreateInstance(filterType) as IAITool;
+                    filter = Activator.CreateInstance(filterType) as IAIChatTool;
                 }
                 catch (Exception e)
                 {
-                    Logger.Error($"Unable to create {filterType.FullName} while GetDatasources. {e.Message}");
+                    Logger.Error($"Unable to create {filterType.FullName} while GetTools. {e.Message}");
                     filter = null;
                 }
 
@@ -157,8 +157,7 @@ namespace Satrabel.AIChat.Services
 
         private static bool IsValidToolProvider(Type t)
         {
-            return t != null && t.IsClass && !t.IsAbstract && t.IsVisible && typeof(IAITool).IsAssignableFrom(t);
+            return t != null && t.IsClass && !t.IsAbstract && t.IsVisible && typeof(IAIChatTool).IsAssignableFrom(t);
         }
-
     }
 }

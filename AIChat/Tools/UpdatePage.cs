@@ -33,21 +33,20 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "Error: Invalid page ID";
                 }
-
                 // Get the portal ID
                 var portalId = PortalSettings.Current.PortalId;
                 var portalSettings = new PortalSettings(portalId);
+                var portalAliases = PortalAliasController.Instance.GetPortalAliasesByPortalId(portalId);
+                portalSettings.PrimaryAlias = portalAliases.FirstOrDefault(a => a.IsPrimary);
+                portalSettings.PortalAlias = PortalAliasController.Instance.GetPortalAlias(portalSettings.DefaultPortalAlias);
                 var pagesController = PagesController.Instance;
-
                 var pageUrl = "";
                 var keywords = "";
-
                 var pageSettings = pagesController.GetPageSettings((int)tabId, portalSettings);
                 if (pageSettings == null)
                 {
                     return "PageNotFound";
                 }
-
                 pageSettings.Name = !string.IsNullOrEmpty(pageName) ? pageName : pageSettings.Name;
                 pageSettings.Title = !string.IsNullOrEmpty(pageTitle) ? pageTitle : pageSettings.Title;
                 pageSettings.Url = !string.IsNullOrEmpty(pageUrl) ? pageUrl : pageSettings.Url;
@@ -59,9 +58,7 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "MethodPermissionDenied";
                 }
-
                 var updatedTab = pagesController.SavePageDetails(portalSettings, pageSettings);
-
                 var lstResults = new List<PageModel> { new PageModel(updatedTab) };
                 return "PageUpdatedMessage";
             }

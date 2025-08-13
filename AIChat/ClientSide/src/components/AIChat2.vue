@@ -87,7 +87,7 @@
                 <div class="d-flex gap-2 pt-2 justify-content-end">
                     
                     <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
-                        <option value="">No rule</option>
+                        <option value="">No rules</option>
                         <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
                        
                     </select>
@@ -124,10 +124,10 @@
                 <div class="d-flex gap-2 pt-2 justify-content-end">
                     <div class="d-flex gap-2 text-danger" v-if="selectedMode === 'agent'">
                         <i class="bi bi-exclamation-triangle"></i>
-                        <span>In Read/Write mode, AI can make modification to your system. Use with caution.</span>
+                        <span>In Read/Write mode, Some modification can be done on your system.</span>
                     </div>
                     <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
-                        <option value="">No instructions</option>
+                        <option value="">No rules</option>
                         <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
                        
                     </select>
@@ -193,7 +193,9 @@ export default {
             totalInputTokens:0,
             totalOutputTokens:0,
             cacheCreationInputTokens:0,
-            cacheReadInputTokens:0
+            cacheReadInputTokens:0,
+            autoReadonlyTools: false,
+            autoWriteTools: false
         };
     },
     methods: {
@@ -203,6 +205,8 @@ export default {
                 if (data.success) {
                     this.models = data.models || '';
                     this.rules = data.rules || [];
+                    this.autoReadonlyTools = data.autoReadonlyTools || false;
+                    this.autoWriteTools = data.autoWriteTools || false;
                 } else {
                     this.message = data.message;
                 }
@@ -280,6 +284,11 @@ export default {
                     this.$nextTick(() => {
                         Prism.highlightAll();
                     });
+                    if (this.autoReadonlyTools && this.tool && this.tool.readOnly ) {
+                        this.runTool();
+                    } else if (this.autoWriteTools && this.tool) {
+                        this.runTool();
+                    }
                 } else {
                     this.message = data.message;
                 }
@@ -299,23 +308,18 @@ export default {
     line-height: 1.6;
 }
 
-:deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
-    
-    margin-bottom: 16px;
-    
+:deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {  
+    margin-bottom: 16px;    
     line-height: 1.25;
 }
 
 :deep(h1) {
     font-size: 2em;
     font-weight: 600;
-    
 }
 
 :deep(h2) {
-    font-size: 1.5em;
-    
-    
+    font-size: 1.5em;    
 }
 
 :deep(pre) {

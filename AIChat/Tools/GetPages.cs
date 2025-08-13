@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace Satrabel.AIChat.Tools
 {
-    public class GetPagesTool : ITool, IAITool
+    public class GetPagesTool : ITool, IAIChatTool
     {
         public string Name => "Get Pages";
 

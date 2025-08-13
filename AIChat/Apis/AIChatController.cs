@@ -41,6 +41,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         private const string APIKEY_SETTING = "AIChat_ApiKey";
         private const string MODEL_SETTING = "AIChat_Model";
         private const string TOOLS_SETTING = "AIChat_Tools";
+        private const string MAX_TOKENS_SETTING = "AIChat_MAX_TOKENS";
+        private const string AUTO_READONLY_TOOLS_SETTING = "AIChat_AUTO_READONLY_TOOLS";
+        private const string AUTO_WRITE_TOOLS_SETTING = "AIChat_AUTO_WRITE_TOOLS";
 
         [HttpGet]
         public async Task<SettingsDto> GetSettings()
@@ -51,15 +54,26 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 var apiKey = PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
                 if (!string.IsNullOrEmpty(apiKey))
                 {
-                    AnthropicService anthropicService = new AnthropicService(apiKey, Logger, AnthropicModels.Claude35Haiku20241022);
-                    res.Models = await anthropicService.GetModelsAsync();
+                    AnthropicService anthropicService = new AnthropicService(apiKey, Logger, AnthropicModels.Claude35Haiku20241022, 1024);
+                    try
+                    {
+                        res.Models = await anthropicService.GetModelsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        res.Success = false;
+                        res.Message = $"Error getting models: {ex.Message}";
+                    }
                 }
                 else
                 {
                     res.Models = new List<ModelDto> { new ModelDto { Value = AnthropicModels.Claude35Sonnet20241022, Name = "Claude 3.5 Sonnet" } };
                 }
-                res.ApiKey = apiKey;
+                res.ApiKey = string.IsNullOrEmpty(apiKey) ? "" : "********";
+                res.MaxTokens = int.Parse(PortalController.GetPortalSetting(MAX_TOKENS_SETTING, PortalId, "1024"));
                 res.Model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, AnthropicModels.Claude35Sonnet20241022);
+                res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
+                res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
                 var tools = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "").Split(',').ToList();
                 res.Tools = new ToolsService(Logger).GetAllTools().Select(t => new ToolDto
                 {
@@ -69,18 +83,28 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 }).ToList();
 
                 var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
-                res.GlobalRules = File.ReadAllText(Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "airules.md"));
+                
                 if (Directory.Exists(rulesPath))
                 {
-                    res.Rules = Directory.GetFiles(rulesPath).Select(f => new RuleDto
+                    res.Rules = Directory.GetFiles(rulesPath).Where(f => !f.EndsWith("global.md")).Select(f => new RuleDto
                     {
                         Name = Path.GetFileNameWithoutExtension(f),
                         Rule = File.ReadAllText(f)
                     }).ToList();
+                    var globalFilename = Path.Combine(rulesPath, "global.md");
+                    if (File.Exists(globalFilename))
+                    {
+                        res.GlobalRules = File.ReadAllText(globalFilename);
+                    }                    
                 }
                 else
                 {
-                    Directory.CreateDirectory(rulesPath);
+                    Directory.CreateDirectory(rulesPath);                    
+                    
+                }
+                if (string.IsNullOrEmpty(res.GlobalRules))
+                {
+                    res.GlobalRules = "# global rules";
                 }
                 res.Success = true;
             }
@@ -88,6 +112,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             {
                 res.Message = ex.Message;
                 res.Success = false;
+                Logger.Error("Error getting settings", ex);
             }
 
             return res;
@@ -97,7 +122,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpPost]
         public void SaveSettings(SettingsDto request)
         {
-            if (!string.IsNullOrEmpty(request.ApiKey))
+            if (!string.IsNullOrEmpty(request.ApiKey) && request.ApiKey != "********")
             {
                 PortalController.UpdatePortalSetting(PortalId, APIKEY_SETTING, request.ApiKey);
             }
@@ -105,17 +130,20 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             {
                 PortalController.UpdatePortalSetting(PortalId, MODEL_SETTING, request.Model);
             }
+            PortalController.UpdatePortalSetting(PortalId, AUTO_READONLY_TOOLS_SETTING, request.AutoReadonlyTools.ToString());
+            PortalController.UpdatePortalSetting(PortalId, AUTO_WRITE_TOOLS_SETTING, request.AutoWriteTools.ToString());
             if (request.Tools != null)
             {
                 PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
-            }
-            File.WriteAllText(Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "airules.md"), request.GlobalRules);
+            }            
+            PortalController.UpdatePortalSetting(PortalId, MAX_TOKENS_SETTING, request.MaxTokens.ToString());
             var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+            File.WriteAllText(Path.Combine(rulesPath, "global.md"), request.GlobalRules);
             if (!Directory.Exists(rulesPath))
             {
                 Directory.CreateDirectory(rulesPath);
             }
-            var files = Directory.GetFiles(rulesPath);
+            var files = Directory.GetFiles(rulesPath).Where(f => !f.EndsWith("global.md"));
             foreach (var file in files)
             {
                 if (!request.Rules.Any(r => r.Name == Path.GetFileNameWithoutExtension(file)))
@@ -137,8 +165,11 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             if (Directory.Exists(rulesPath))
             {
                 res.Rules = Directory.GetFiles(rulesPath)
+                    .Where(f => !f.EndsWith("global.md"))
                     .Select(f => Path.GetFileNameWithoutExtension(f))
                     .ToList();
+                res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
+                res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
             }
             res.Success = true;
             return res;
@@ -167,8 +198,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
             ToolsService toolsService = new ToolsService(Logger);
             var model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, AnthropicModels.Claude35Sonnet20241022);
-
-            AnthropicService anthropicService = new AnthropicService(GetApiKey(), Logger, model);
+            var maxTokens = int.Parse(PortalController.GetPortalSetting(MAX_TOKENS_SETTING, PortalId, "1024"));
+            AnthropicService anthropicService = new AnthropicService(GetApiKey(), Logger, model, maxTokens);
             ToolResponse toolResponse = null;
             try
             {
@@ -278,6 +309,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     {
                         Name = response.Value.ToolCall.Tool.Name,
                         Fullname = response.Value.ToolCall.ToolUse.ToText(),
+                        ReadOnly = toolsService.GetReadOnlyTools().Any(t => t.Name == response.Value.ToolCall.Tool.Name),
                         ToolUse = response.Value.ToolCall.ToolUse,
                     };
                 }
@@ -407,7 +439,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var ps = PortalSettings;
             var portalcontext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
 
-            var airulesFilename = ps.HomeSystemDirectoryMapPath + "airules.md";
+            var rulesPath = ps.HomeSystemDirectoryMapPath + "airules";
+            var airulesFilename = rulesPath + "\\global.md";
             var airules = string.Empty;
             if (File.Exists(airulesFilename))
             {
@@ -415,11 +448,11 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
             else
             {
-                File.WriteAllText(airulesFilename, "# global rules");
+                airules = "<global>Always output in markdown format</global>";
             }
             if (!string.IsNullOrEmpty(request.Rules))
             {
-                var rulesPath = ps.HomeSystemDirectoryMapPath + "airules\\" + request.Rules + ".md";
+                var rulePath = rulesPath + "\\" + request.Rules + ".md";
                 if (File.Exists(rulesPath))
                 {
                     airules += $"\n<{request.Rules}>" + File.ReadAllText(rulesPath)+ $"</{request.Rules}>";

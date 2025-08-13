@@ -149,7 +149,6 @@
     <Compile Include="ContextWindow\TokenEstimator.cs" />
     <Compile Include="ContextWindow\TrimmingStrategy.cs" />
     <Compile Include="Services\AnthropicService.cs" />
-    <Compile Include="Services\IAIChatTool.cs" />
     <Compile Include="Services\ToolsService.cs" />
     <Compile Include="Apis\Dto\MessageDto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -160,11 +159,11 @@
     <Compile Include="Tools\GetFolders.cs" />
     <Compile Include="Tools\GetPage.cs" />
     <Compile Include="Tools\GetSystemFiles.cs" />
-    <Compile Include="Tools\IAITool.cs" />
+    <Compile Include="Tools\IAIChatTool.cs" />
     <Compile Include="Tools\ReadFile.cs" />
     <Compile Include="Tools\ReadSystemFile.cs" />
-    <Compile Include="Tools\SetModule.cs" />
-    <Compile Include="Tools\GetModule.cs" />
+    <Compile Include="Tools\SetHTMLModule.cs" />
+    <Compile Include="Tools\GetHTMLModule.cs" />
     <Compile Include="Tools\GetModules.cs" />
     <Compile Include="Tools\GetPages.cs" />
     <Compile Include="Tools\GetUrlHtml.cs" />

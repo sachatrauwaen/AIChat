@@ -13,5 +13,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("toolUse")]
         public ToolUseContent ToolUse { get; set; }
+
+        [JsonProperty("readOnly")]
+        public bool ReadOnly { get; set; }
     }
 }

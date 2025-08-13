@@ -17,11 +17,13 @@ namespace Satrabel.AIChat.Services
         AnthropicApiClient client;
         ILog Logger;
         string model;
-        public AnthropicService(string apiKey, ILog logger, string model)
+        int maxTokens;
+        public AnthropicService(string apiKey, ILog logger, string model, int maxTokens)
         {
             client = new AnthropicApiClient(apiKey, new HttpClient());
             Logger = logger;
             this.model = model;
+            this.maxTokens = maxTokens;
         }
 
         public async Task<AnthropicResult<MessageResponse>> CreateMessageAsync(string system, List<MessageDto> messages, List<Tool> tools)
@@ -30,11 +32,13 @@ namespace Satrabel.AIChat.Services
             var response = await client.CreateMessageAsync(new MessageRequest(
                       model,
                       GetMessageList(messages),
-                      maxTokens: 1024,
+                      maxTokens: maxTokens,
                       temperature: 0.1m,
                       tools: tools,
                       // system: system,
-                      systemMessages: new List<TextContent> { new TextContent(system, new EphemeralCacheControl()) }
+                      systemMessages: new List<TextContent> { 
+                          new TextContent("Output always in markdown format. When using tools, please use them one at a time and wait for results before making additional tool calls."),
+                          new TextContent(system, new EphemeralCacheControl()) }
                     ));
 
             if (!response.IsSuccess)
@@ -106,10 +110,17 @@ namespace Satrabel.AIChat.Services
         public async Task<List<ModelDto>> GetModelsAsync()
         {
             var res = new List<ModelDto>();
-            var models = await client.ListModelsAsync(new PagingRequest(beforeId: AnthropicModels.Claude3Haiku));
+            var response = await client.ListModelsAsync(new PagingRequest(beforeId: AnthropicModels.Claude3Haiku));
+            if (!response.IsSuccess)
+            {
+                Logger.Error("Failed to create message");
+                Logger.ErrorFormat("Error Type: {0}", response.Error.Error.Type);
+                Logger.ErrorFormat("Error Message: {0}", response.Error.Error.Message);
+                throw new Exception($"Failed to create message: {response.Error.Error.Message}");
+            }
             //foreach (var model in models)
             {
-                res.AddRange(models.Value.Data.Select(m => new ModelDto()
+                res.AddRange(response.Value.Data.Select(m => new ModelDto()
                 {
                     Name = m.DisplayName,
                     Value = m.Id,
