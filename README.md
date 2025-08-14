@@ -13,8 +13,8 @@ You need to set up an Anthropic account and [obtain an API key](https://console.
 
 ## Features
 - Chat with your DNN portal.
-- There are some tools available to help you manage your DNN portal, like page and module managemnet, send email, get html of an url, read and write files etc.
-- Ability to add your own Tools by implemnting : IAITool. Exemple for open content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
+- There are some tools available to help you manage your DNN portal, like page and module management, send email, get the HTML of a url, read and write files etc.
+- Ability to add your own Tools by implementing : IAITool. Example for Open Content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
 
 ## Settings
 
