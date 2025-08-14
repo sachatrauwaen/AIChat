@@ -8,8 +8,8 @@ You need to set up an Anthropic account and obtain an API key to use this extens
 #Features
 
 - Chat with your DNN portal.
-- There are some tools available to help you with your DNN portal, like getting the current user, the current page, etc.
-- Ability to add your own Tools by implemnting : IAITool	
+- There are some tools available to help you manage your DNN portal, like page and module managemnet, send email, get html of an url, read and write files etc.
+- Ability to add your own Tools by implemnting : IAITool. Exemple for open content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
 
 ## Backend (C#)
 - Implements a PersonaBar menu and a Web API controller that proxies chat requests to Anthropic.
