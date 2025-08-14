@@ -25,6 +25,8 @@ namespace Satrabel.AIChat.Tools
 
         public bool ReadOnly => true;
 
+        public string RulesFolder => string.Empty;
+
         public string GetPages()
         {
             var tc = new TabController();

@@ -15,6 +15,8 @@ namespace Satrabel.AIChat.Tools
 
         bool ReadOnly { get; }
 
+        string RulesFolder { get; }
+
         MethodInfo Function { get; }
     }
 }

@@ -78,6 +78,7 @@
                 <button class="btn btn-light" @click="userInput='List pages of this website'">List pages of this website</button> 
                 <button class="btn btn-light" @click="userInput='Send a email with a joke to info@example.com'">Send a email</button>
                 <button class="btn btn-light" @click="userInput='Generate a seo report of the home page in a table'">Make a seo report of the home page</button>
+                <button class="btn btn-light" @click="userInput='Show all available tools'">Show tools</button>
             </div>
             <div class="card card-body border-radius-5">
                 <div class="d-flex gap-2">
@@ -122,9 +123,9 @@
                     <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />                                    
                 </div>
                 <div class="d-flex gap-2 pt-2 justify-content-end">
-                    <div class="d-flex gap-2 text-danger" v-if="selectedMode === 'agent'">
+                    <div class="d-flex gap-2 text-danger mt-1" v-if="selectedMode === 'agent'">
                         <i class="bi bi-exclamation-triangle"></i>
-                        <span>In Read/Write mode, Some modification can be done on your system.</span>
+                        <span>In Read/Write mode, modifications can be done on your system.</span>
                     </div>
                     <select v-if="rules.length > 0" class="form-select _form-select-sm" style="width: 150px;" v-model="selectedRule">
                         <option value="">No rules</option>

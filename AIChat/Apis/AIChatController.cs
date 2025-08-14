@@ -83,7 +83,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 }).ToList();
 
                 var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
-                
+
                 if (Directory.Exists(rulesPath))
                 {
                     res.Rules = Directory.GetFiles(rulesPath).Where(f => !f.EndsWith("global.md")).Select(f => new RuleDto
@@ -95,12 +95,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     if (File.Exists(globalFilename))
                     {
                         res.GlobalRules = File.ReadAllText(globalFilename);
-                    }                    
+                    }
                 }
                 else
                 {
-                    Directory.CreateDirectory(rulesPath);                    
-                    
+                    Directory.CreateDirectory(rulesPath);
+
                 }
                 if (string.IsNullOrEmpty(res.GlobalRules))
                 {
@@ -135,7 +135,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             if (request.Tools != null)
             {
                 PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
-            }            
+            }
             PortalController.UpdatePortalSetting(PortalId, MAX_TOKENS_SETTING, request.MaxTokens.ToString());
             var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
             File.WriteAllText(Path.Combine(rulesPath, "global.md"), request.GlobalRules);
@@ -160,18 +160,42 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpGet]
         public async Task<InfoDto> GetInfo()
         {
-            var res = new InfoDto();
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
-            if (Directory.Exists(rulesPath))
+            var res = new InfoDto()
             {
-                res.Rules = Directory.GetFiles(rulesPath)
+                Rules = new List<string>(),
+            };
+            ToolsService toolsService = new ToolsService(Logger);
+            var folders = new List<string>();
+            foreach (var tool in toolsService.GetAllTools())
+            {
+                var rulesFolder = toolsService.GetToolFolder(tool.Name);
+                if (!string.IsNullOrEmpty(rulesFolder) && !folders.Contains(rulesFolder))
+                {
+                    folders.Add(rulesFolder);
+                }
+            }
+            foreach (var folder in folders)
+            {
+                res.Rules.AddRange(GetRules(AppDomain.CurrentDomain.BaseDirectory + folder.Replace("/", "\\").Trim('\\')));
+            }
+            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+            res.Rules.AddRange(GetRules(rulesPath));
+            res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
+            res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
+            res.Success = true;
+            return res;
+        }
+
+        private List<string> GetRules(string folder)
+        {
+            var res = new List<string>();
+            if (Directory.Exists(folder))
+            {
+                res.AddRange(Directory.GetFiles(folder)
                     .Where(f => !f.EndsWith("global.md"))
                     .Select(f => Path.GetFileNameWithoutExtension(f))
-                    .ToList();
-                res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
-                res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
+                    .ToList());
             }
-            res.Success = true;
             return res;
         }
 
@@ -219,7 +243,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                         }
                     }
                 }
-                string systemPrompt = GenerateSystemPrompt(request);
+                var tools = GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools());
+                string systemPrompt = GenerateSystemPrompt(request, tools, toolsService);
+
                 AnthropicResult<MessageResponse> response;
                 if (request.RunTool) // run tools
                 {
@@ -243,7 +269,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     });
                     response = await anthropicService.CreateMessageAsync(
                          messages: dtos,
-                         tools: GetTools(request, toolsService.GetReadOnlyTools(), toolsService.GetAllTools()),
+                         tools: tools,
                          system: systemPrompt
                     );
 
@@ -283,7 +309,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     var outputTokens = response.Value.Usage.OutputTokens;
                     var cacheCreationInputTokens = response.Value.Usage.CacheCreationInputTokens;
                     var cacheReadInputTokens = response.Value.Usage.CacheReadInputTokens;
-                    
+
                     decimal price = inputTokens * GetPricePerInputToken(model) / 1000000m
                                     + outputTokens * GetPricePerOutputToken(model) / 1000000m
                                     + cacheCreationInputTokens * GetPricePerCacheCreationInputToken(model) / 1000000m
@@ -427,7 +453,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
         }
 
-        private string GenerateSystemPrompt(ChatToolRequest request)
+        private string GenerateSystemPrompt(ChatToolRequest request, List<Tool> tools, ToolsService toolsService)
         {
             var application = DotNetNuke.Application.DotNetNukeContext.Current.Application;
             var controlBarController = DotNetNuke.Web.Components.Controllers.ControlBarController.Instance;
@@ -438,28 +464,44 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var hostContext = $"<host>Version = v.{Globals.FormatVersion(application.Version, true)}, Product = {application.Description}, PortalCount = {portalCount}, Framework = {(isHost ? Globals.NETFrameworkVersion.ToString() : string.Empty)} </host>";
             var ps = PortalSettings;
             var portalcontext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
-
-            var rulesPath = ps.HomeSystemDirectoryMapPath + "airules";
-            var airulesFilename = rulesPath + "\\global.md";
-            var airules = string.Empty;
-            if (File.Exists(airulesFilename))
+            var folders = new List<string>();
+            foreach (var tool in tools)
             {
-                airules = "<global>" + File.ReadAllText(airulesFilename)+ "</global>";
-            }
-            else
-            {
-                airules = "<global>Always output in markdown format</global>";
-            }
-            if (!string.IsNullOrEmpty(request.Rules))
-            {
-                var rulePath = rulesPath + "\\" + request.Rules + ".md";
-                if (File.Exists(rulesPath))
+                var rulesFolder = toolsService.GetToolFolder(tool.Name);
+                if (!string.IsNullOrEmpty(rulesFolder) && !folders.Contains(rulesFolder))
                 {
-                    airules += $"\n<{request.Rules}>" + File.ReadAllText(rulesPath)+ $"</{request.Rules}>";
+                    folders.Add(rulesFolder.Replace("/", "\\").Trim('\\'));
                 }
             }
+            var airules = string.Empty;
+            foreach (var rulesFolder in folders)
+            {
+                airules += AddRules(AppDomain.CurrentDomain.BaseDirectory + rulesFolder, request.Rules);
+            }
+            var rulesPath = ps.HomeSystemDirectoryMapPath + "airules";
+            airules += AddRules(rulesPath, request.Rules);
             var systemPrompt = $"{hostContext} \n {portalcontext} \n {airules}";
             return systemPrompt;
+        }
+
+        private string AddRules(string rulesPath, string selectedRule)
+        {
+            var airules = string.Empty;
+            var airulesFilename = rulesPath + "\\global.md";
+
+            if (File.Exists(airulesFilename))
+            {
+                airules = "<global>" + File.ReadAllText(airulesFilename) + "</global>";
+            }
+            if (!string.IsNullOrEmpty(selectedRule))
+            {
+                var rulePath = rulesPath + "\\" + selectedRule + ".md";
+                if (File.Exists(rulePath))
+                {
+                    airules += $"\n<{selectedRule}>" + File.ReadAllText(rulePath) + $"</{selectedRule}>";
+                }
+            }
+            return airules;
         }
 
         private string GetApiKey()

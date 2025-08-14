@@ -26,7 +26,7 @@ namespace Satrabel.AIChat.Services
 
         private static Tool ToolCreate(IAIChatTool tool)
         {
-            return Tool.CreateFromInstanceMethod(tool.Name, tool.Description, tool,  tool.Function.Name);
+            return Tool.CreateFromInstanceMethod(tool.Name, tool.Description, tool, tool.Function.Name);
         }
 
         private List<Tool> writeTools = new[] {
@@ -41,22 +41,23 @@ namespace Satrabel.AIChat.Services
 
         private List<Tool> allTools = new List<Tool>();
 
+        private Dictionary<string,IAIChatTool> customTools = new Dictionary<string, IAIChatTool>();
+
         private ILog Logger;
 
         public ToolsService(ILog logger)
         {
-            
             allTools.AddRange(writeTools);
             allTools.AddRange(readOnlyTools);
-
             var tools = GetTools();
             foreach (var tool in tools)
             {
                 try
                 {
-                    var t = ToolCreate(tool);                    
+                    var t = ToolCreate(tool);
                     if (!allTools.Any(t2 => t2.Name == t.Name))
                     {
+                        customTools.Add(t.Name, tool);
                         if (tool.ReadOnly)
                         {
                             readOnlyTools.Add(t);
@@ -74,7 +75,7 @@ namespace Satrabel.AIChat.Services
                 }
             }
             var lastTool = readOnlyTools.LastOrDefault();
-            if (lastTool!= null)
+            if (lastTool != null)
             {
                 lastTool.CacheControl = new EphemeralCacheControl();
             }
@@ -113,7 +114,8 @@ namespace Satrabel.AIChat.Services
             return new ToolCall(tool, toolUse);
         }
 
-        public async Task<string> InvokeAsync(ToolCall toolCall) {
+        public async Task<string> InvokeAsync(ToolCall toolCall)
+        {
             var toolCallResult = await toolCall.InvokeAsync<string>();
             string toolResultContent;
 
@@ -158,6 +160,15 @@ namespace Satrabel.AIChat.Services
         private static bool IsValidToolProvider(Type t)
         {
             return t != null && t.IsClass && !t.IsAbstract && t.IsVisible && typeof(IAIChatTool).IsAssignableFrom(t);
+        }
+
+        public string GetToolFolder(string toolName)
+        {
+            if (customTools.ContainsKey(toolName))
+            {
+                return customTools[toolName].RulesFolder;
+            }
+            return string.Empty;
         }
     }
 }
