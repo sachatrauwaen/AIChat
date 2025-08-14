@@ -143,7 +143,8 @@ export default {
            model: '',
            tools: [],
            autoReadonlyTools: false,
-           autoWriteTools: false
+           autoWriteTools: false,
+           maxTokens: 0
         };
     },
     methods: {

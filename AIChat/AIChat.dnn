@@ -2,7 +2,7 @@
   <packages>
     <package name="AIChat" type="PersonaBar" version="00.01.00">
       <friendlyName>AI Chat</friendlyName>
-      <description>PersonaBar extension for AI-powered chat using Anthropic Claude and Vue.js frontend.</description>
+      <description>PersonaBar extension for AI-powered Assistant using Anthropic Claude and Vue.js frontend.</description>
       <iconFile>~/DesktopModules/Admin/AIChat/icon_aichat.png</iconFile>
      <owner>
         <name>Satrabel.be</name>
@@ -44,6 +44,10 @@
               <name>Satrabel.AIChat.dll</name>
               <path>bin</path>
             </assembly>
+			<assembly>
+				<name>Satrabel.AnthropicClient.dll</name>
+				<path>bin</path>
+			</assembly>
           </assemblies>
         </component>
        
