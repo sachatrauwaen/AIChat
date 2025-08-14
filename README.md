@@ -1,19 +1,23 @@
-# DNN PersonaBar AI Chat Extension 
+# DNN AI Chat 
 
 This extension adds an AI-powered chat to the DNN PersonaBar, using a Vue.js frontend and the Anthropic SDK for C#.
 You need to set up an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
 
 **Beta version. Make a backup before use.**
 
+---
+
+<img width="467" height="230" alt="image" src="https://github.com/user-attachments/assets/be0346a9-12fc-47f0-b318-4aa356979bf5" />
+
+
+
 ## Features
 - Chat with your DNN portal.
 - There are some tools available to help you manage your DNN portal, like page and module managemnet, send email, get html of an url, read and write files etc.
 - Ability to add your own Tools by implemnting : IAITool. Exemple for open content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
 
----
-<img width="467" height="230" alt="image" src="https://github.com/user-attachments/assets/be0346a9-12fc-47f0-b318-4aa356979bf5" />
+## Settings
 
----
 <img width="372" height="460" alt="image" src="https://github.com/user-attachments/assets/95c2b4ad-ea0a-486b-a991-e5e8588bee36" />
 
 ---
@@ -27,6 +31,6 @@ You need to set up an Anthropic account and [obtain an API key](https://console.
 
 ## Usage
 - Log in as Host/SuperUser.
-- Open the PersonaBar and select "AI Chat".
+- Open the PersonaBar and select "AI Chat" in manage section.
 - Start chatting with Claude via Anthropic!
 
