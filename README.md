@@ -21,13 +21,9 @@ You need to set up an Anthropic account and [obtain an API key](https://console.
 <img width="372" height="460" alt="image" src="https://github.com/user-attachments/assets/95c2b4ad-ea0a-486b-a991-e5e8588bee36" />
 
 ---
+# Documentation
 
-## Backend (C#)
-- Implements a PersonaBar menu and a Web API controller that proxies chat requests to Anthropic.
-
-## Frontend (Vue.js)
-- Simple chat UI that calls the backend API.
-- Built with Vite
+[https://github.com/sachatrauwaen/AIChat/wiki](https://github.com/sachatrauwaen/AIChat/wiki)
 
 ## Usage
 - Log in as Host/SuperUser.
