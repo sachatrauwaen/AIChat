@@ -1,7 +1,8 @@
 # DNN AI Assistant 
 
-This extension adds an AI-powered chat to the DNN PersonaBar, using a Vue.js frontend and the Anthropic SDK for C#.
-You need to set up an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
+This extension adds an AI-powered chat to the DNN PersonaBar, using Anthropic api.
+
+You need an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
 
 **Beta version. Make a backup before use.**
 
