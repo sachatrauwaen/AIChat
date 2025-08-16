@@ -28,5 +28,7 @@ You need to set up an Anthropic account and [obtain an API key](https://console.
 ## Usage
 - Log in as Host/SuperUser.
 - Open the PersonaBar and select "AI Assistant" in manage section.
-- Start chatting with Claude via Anthropic!
+- Start chatting with DNN
+
+  [See some example prompts](https://github.com/sachatrauwaen/AIChat/wiki/Prompts)
 
