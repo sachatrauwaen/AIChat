@@ -29,11 +29,14 @@ namespace Satrabel.AIChat.Tools
     {
         public string Name => "Set HTML Module content";
 
-        public string Description => "Set content of DNN_HTML module in";
+        public string Description => "Set content of DNN_HTML module";
 
         public MethodInfo Function => typeof(SetHTMLModuleTool).GetMethod(nameof(SetModule));
 
-        public static string SetModule(Int64 tabId, Int64 moduleId, string content)
+        public static string SetModule(Int64 tabId, Int64 moduleId,
+
+             [FunctionParameter(description: "Content in html format", name: "html_content", required: true)]
+            string content)
         {
             var module = ModulesControllerLibrary.Instance.GetModule(PortalSettings.Current,
                 (int)moduleId, (int)tabId, out KeyValuePair<HttpStatusCode, string> message);
@@ -120,9 +123,8 @@ namespace Satrabel.AIChat.Tools
                 catch (Exception ex)
                 {
                     // Handle exception
-                    return string.Empty;
+                    return "Error : "+ex.Message;
                 }
-
             }
             return string.Empty;
         }

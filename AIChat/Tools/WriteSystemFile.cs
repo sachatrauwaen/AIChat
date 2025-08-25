@@ -17,7 +17,7 @@ namespace Satrabel.AIChat.Tools
     {
         public string Name => "Write System File";
 
-        public string Description => "Write content to a file using .NET file system APIs";
+        public string Description => "Write to a portal system file";
 
         public MethodInfo Function => typeof(WriteSystemFileTool).GetMethod(nameof(WriteSystemFile));
 
@@ -30,19 +30,14 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "Error: File path cannot be empty";
                 }
-
-                var portalRoot = PortalSettings.Current.HomeDirectory;
-
-                // Handle portal-relative paths
-                if (filePath.StartsWith("~/"))
+                if (Path.GetDirectoryName(filePath).Contains("."))
                 {
-                    filePath = HttpContext.Current.Server.MapPath(filePath);
+                    return "Error: File path cannot contain dots";
                 }
-                else
-                {
-                    // Assume path is relative to portal root
-                    filePath = HttpContext.Current.Server.MapPath("~/" + portalRoot + filePath.TrimStart('/'));
-                }
+
+                var portalRoot = PortalSettings.Current.HomeSystemDirectory;
+
+                filePath = HttpContext.Current.Server.MapPath("~/" + portalRoot + filePath.TrimStart('/'));
 
                 // Ensure directory exists
                 string directoryName = Path.GetDirectoryName(filePath);
@@ -61,7 +56,7 @@ namespace Satrabel.AIChat.Tools
                 // Security check: prevent writing to sensitive file types or locations
                 string extension = Path.GetExtension(filePath).ToLowerInvariant();
                 string[] restrictedExtensions = { ".exe", ".dll", ".config", ".asax", ".cs" };
-                
+
                 if (restrictedExtensions.Contains(extension))
                 {
                     return $"Error: Writing to files with extension '{extension}' is not allowed for security reasons";
@@ -106,4 +101,4 @@ namespace Satrabel.AIChat.Tools
             }
         }
     }
-} 
+}

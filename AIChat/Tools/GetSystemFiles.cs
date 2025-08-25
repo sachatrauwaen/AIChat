@@ -17,7 +17,7 @@ namespace Satrabel.AIChat.Tools
     {
         public string Name => "Get System Files";
 
-        public string Description => "Get list of files from a specific system folder using .NET APIs";
+        public string Description => "Get list of files from a specific portal system folder";
 
         public MethodInfo Function => typeof(GetSystemFilesTool).GetMethod(nameof(GetSystemFiles));
 
@@ -25,7 +25,7 @@ namespace Satrabel.AIChat.Tools
         {
             try
             {
-                var portalRoot = PortalSettings.Current.HomeDirectory;
+                var portalRoot = PortalSettings.Current.HomeSystemDirectory;
                 // Handle empty folder path (root)
                 if (string.IsNullOrEmpty(folderPath))
                 {
@@ -64,14 +64,14 @@ namespace Satrabel.AIChat.Tools
                         //IsReadOnly = f.IsReadOnly,
                         //Attributes = f.Attributes.ToString()
                     }),
-                    //Directories = subDirs.Select(d => new
-                    //{
-                    //    Name = d.Name,
-                    //    FullPath = d.FullName,
-                    //    RelativePath = GetRelativePath(d.FullName),
-                    //    LastModified = d.LastWriteTime,
-                    //    Attributes = d.Attributes.ToString()
-                    //})
+                    Directories = subDirs.Select(d => new
+                    {
+                        Name = d.Name,
+                        FullPath = d.FullName,
+                        RelativePath = GetRelativePath(d.FullName),
+                        LastModified = d.LastWriteTime,
+                        Attributes = d.Attributes.ToString()
+                    })
                 };
 
                 return JsonConvert.SerializeObject(result);

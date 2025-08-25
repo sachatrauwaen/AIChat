@@ -30,7 +30,8 @@ namespace Satrabel.AIChat.Tools
         public string GetPages()
         {
             var tc = new TabController();
-            var tabs = tc.GetTabsByPortal(PortalSettings.Current.PortalId);
+            var tabs = tc.GetTabsByPortal(PortalSettings.Current.PortalId)
+                .Where(t=> t.Value.IsDeleted == false);
             return JsonConvert.SerializeObject(tabs.Select(t=> new { 
                 t.Value.TabID, 
                 t.Value.TabName, 

@@ -17,7 +17,7 @@ namespace Satrabel.AIChat.Tools
     {
         public string Name => "Read System File";
 
-        public string Description => "Read content of a file using .NET file system APIs";
+        public string Description => "Read content of a portal system file ";
 
         public MethodInfo Function => typeof(ReadSystemFileTool).GetMethod(nameof(ReadSystemFile));
 
@@ -30,19 +30,14 @@ namespace Satrabel.AIChat.Tools
                 {
                     return "Error: File path cannot be empty";
                 }
-
-                var portalRoot = PortalSettings.Current.HomeDirectory;
-
-                // Handle portal-relative paths
-                if (filePath.StartsWith("~/"))
+                if (Path.GetDirectoryName(filePath).Contains("."))
                 {
-                    filePath = HttpContext.Current.Server.MapPath(filePath);
+                    return "Error: File path cannot contain dots";
                 }
-                else
-                {
-                    // Assume path is relative to portal root
-                    filePath = HttpContext.Current.Server.MapPath("~/" + portalRoot + filePath.TrimStart('/'));
-                }
+
+                var portalRoot = PortalSettings.Current.HomeSystemDirectory;
+
+                filePath = HttpContext.Current.Server.MapPath("~/" + portalRoot + filePath.TrimStart('/'));
 
                 // Check if file exists
                 if (!File.Exists(filePath))
