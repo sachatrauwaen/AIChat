@@ -1,7 +1,8 @@
 # DNN AI Assistant 
 
-This extension adds an AI-powered chat to the DNN PersonaBar, using a Vue.js frontend and the Anthropic SDK for C#.
-You need to set up an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
+This extension adds an AI-powered chat to the DNN PersonaBar, using Anthropic api.
+
+You need an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
 
 **Beta version. Make a backup before use.**
 
@@ -13,24 +14,22 @@ You need to set up an Anthropic account and [obtain an API key](https://console.
 
 ## Features
 - Chat with your DNN portal.
-- There are some tools available to help you manage your DNN portal, like page and module managemnet, send email, get html of an url, read and write files etc.
-- Ability to add your own Tools by implemnting : IAITool. Exemple for open content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
+- There are some tools available to help you manage your DNN portal, like page and module management, send email, get the HTML of a url, read and write files etc.
+- Ability to add your own Tools by implementing : IAITool. Example for Open Content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
 
 ## Settings
 
 <img width="372" height="460" alt="image" src="https://github.com/user-attachments/assets/95c2b4ad-ea0a-486b-a991-e5e8588bee36" />
 
 ---
+# Documentation
 
-## Backend (C#)
-- Implements a PersonaBar menu and a Web API controller that proxies chat requests to Anthropic.
-
-## Frontend (Vue.js)
-- Simple chat UI that calls the backend API.
-- Built with Vite
+[https://github.com/sachatrauwaen/AIChat/wiki](https://github.com/sachatrauwaen/AIChat/wiki)
 
 ## Usage
 - Log in as Host/SuperUser.
 - Open the PersonaBar and select "AI Assistant" in manage section.
-- Start chatting with Claude via Anthropic!
+- Start chatting with DNN
+
+  [See some example prompts](https://github.com/sachatrauwaen/AIChat/wiki/Prompts)
 
