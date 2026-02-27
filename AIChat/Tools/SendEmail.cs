@@ -1,37 +1,81 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using System.Reflection;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.Mail;
 using Newtonsoft.Json;
 using DotNetNuke.Entities.Host;
-using System.Net.Mail;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class SendEmailTool : ITool
+    public class SendEmailTool : IMcpProvider
     {
-        public string Name => "Send Email";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "send-email",
+                Title = "Send Email",
+                Description = "Sends an email using DotNetNuke mail services",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "toEmail",
+                        Description = "Email address of email destination",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "subject",
+                        Description = "Subject of email",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "body",
+                        Description = "Body of email",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "isHtml",
+                        Description = "Is the email body in HTML format",
+                        Required = false,
+                        Type = "boolean"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var toEmail = arguments["toEmail"].ToString();
+                    var subject = arguments["subject"].ToString();
+                    var body = arguments["body"].ToString();
+                    var isHtml = arguments.ContainsKey("isHtml") ? Convert.ToBoolean(arguments["isHtml"]) : false;
+                    
+                    var result = SendEmail(toEmail, subject, body, isHtml);
 
-        public string Description => "Sends an email using DotNetNuke mail services";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(SendEmailTool).GetMethod(nameof(SendEmail));
-
-        public static string SendEmail(
-            [FunctionParameter(description: "Email address of email destination", name: "toEmail", required: true)]
-            string toEmail,
-            [FunctionParameter(description: "Subject of email", name: "subject", required: true)]
-            string subject,
-            [FunctionParameter(description: "Body of email", name: "body", required: true)]
-            string body,
-            [FunctionParameter(description: "Is the email body in html", name: "isHtml", required: false)]
-            bool isHtml = false)
+        public string SendEmail(string toEmail, string subject, string body, bool isHtml = false)
         {
             try
             {

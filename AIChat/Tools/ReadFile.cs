@@ -1,27 +1,55 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.FileSystem;
-using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class ReadFileTool : ITool
+    public class ReadFileTool : IMcpProvider
     {
-        public string Name => "Read File";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "read-file",
+                Title = "Read File",
+                Description = "Read content of a file from a specified path",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "filePath",
+                        Description = "The path of the file to read",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var filePath = arguments["filePath"].ToString();
+                    var result = ReadFile(filePath);
 
-        public string Description => "Read content of a file from a specified path";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(ReadFileTool).GetMethod(nameof(ReadFile));
-
-        public static string ReadFile(string filePath)
+        public string ReadFile(string filePath)
         {
             try
             {

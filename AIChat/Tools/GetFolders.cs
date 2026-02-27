@@ -1,28 +1,55 @@
-using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using System.Reflection;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.FileSystem;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetFoldersTool : ITool
+    public class GetFoldersTool : IMcpProvider
     {
-        public string Name => "Get Folders";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-folders",
+                Title = "Get Folders",
+                Description = "Get list of folders of website",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "parentFolder",
+                        Description = "The parent folder path (empty for all folders)",
+                        Required = false,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var parentFolder = arguments.ContainsKey("parentFolder") ? arguments["parentFolder"].ToString() : "";
+                    var result = GetFolders(parentFolder);
 
-        public string Description => "Get list of folders of website";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetFoldersTool).GetMethod(nameof(GetFolders));
-
-        public static string GetFolders(string parentFolder = "")
+        public string GetFolders(string parentFolder = "")
         {
             var fc = FolderManager.Instance;
             parentFolder = parentFolder.Trim('/');

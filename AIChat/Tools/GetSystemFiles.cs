@@ -1,27 +1,62 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using System.Reflection;
 using DotNetNuke.Entities.Portals;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetSystemFilesTool : ITool
+    public class GetSystemFilesTool : IMcpProvider
     {
-        public string Name => "Get System Files";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-system-files",
+                Title = "Get System Files",
+                Description = "Get list of files from a specific portal system folder",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "folderPath",
+                        Description = "The path of the system folder to get files from (empty for root)",
+                        Required = false,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var folderPath = arguments.ContainsKey("folderPath") ? arguments["folderPath"].ToString() : "";
+                    var result = GetSystemFiles(folderPath);
 
-        public string Description => "Get list of files from a specific portal system folder";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetSystemFilesTool).GetMethod(nameof(GetSystemFiles));
-
-        public static string GetSystemFiles(string folderPath = "")
+        public string GetSystemFiles(string folderPath = "")
         {
             try
             {
@@ -82,7 +117,7 @@ namespace Satrabel.AIChat.Tools
             }
         }
 
-        private static string GetRelativePath(string fullPath)
+        private string GetRelativePath(string fullPath)
         {
             try
             {

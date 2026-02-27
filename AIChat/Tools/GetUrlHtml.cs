@@ -1,26 +1,54 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net.Http;
 
-using AnthropicClient.Models;
-using System.Reflection;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetHtmlTool : ITool
+    public class GetHtmlTool : IMcpProvider
     {
-        public string Name => "Get HTML of an url";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-url-html",
+                Title = "Get HTML of an URL",
+                Description = "Retrieves the HTML content from a specified URL",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "url",
+                        Description = "The URL to retrieve HTML content from",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var url = arguments["url"].ToString();
+                    var result = GetHtml(url);
 
-        public string Description => "Retrieves the HTML content from a specified URL";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetHtmlTool).GetMethod(nameof(GetHtml));
-
-        public static string GetHtml(string url)
+        public string GetHtml(string url)
         {
             try
             {

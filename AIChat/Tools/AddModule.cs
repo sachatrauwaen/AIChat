@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using System.Reflection;
 using DotNetNuke.Common.Utilities;
 using DotNetNuke.Entities.Modules;
 using DotNetNuke.Entities.Modules.Definitions;
@@ -15,18 +14,74 @@ using DotNetNuke.Entities.Tabs;
 using DotNetNuke.Security.Permissions;
 using DotNetNuke.Services.Localization;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class AddModuleTool : ITool
+    public class AddModuleTool : IMcpProvider
     {
-        public string Name => "Add Module";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "add-module",
+                Title = "Add Module",
+                Description = "Add a module to a DNN page",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page to add the module to",
+                        Required = true,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "moduleName",
+                        Description = "The name of the module to add",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "paneName",
+                        Description = "The name of the pane to add the module to (default: ContentPane)",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "title",
+                        Description = "The title of the module",
+                        Required = false,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var tabId = Convert.ToInt64(arguments["tabId"]);
+                    var moduleName = arguments["moduleName"].ToString();
+                    var paneName = arguments.ContainsKey("paneName") ? arguments["paneName"].ToString() : "ContentPane";
+                    var title = arguments.ContainsKey("title") ? arguments["title"].ToString() : "";
+                    
+                    var result = AddModule(tabId, moduleName, paneName, title);
 
-        public string Description => "Add a module to a DNN page";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(AddModuleTool).GetMethod(nameof(AddModule));
-
-        public static string AddModule(Int64 tabId, string moduleName, string paneName = "ContentPane", string title = "")
+        public string AddModule(Int64 tabId, string moduleName, string paneName = "ContentPane", string title = "")
         {
             try
             {

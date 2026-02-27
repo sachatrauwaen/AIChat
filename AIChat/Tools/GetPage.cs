@@ -1,31 +1,57 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using Dnn.PersonaBar.Library.Security;
-using Dnn.PersonaBar.Pages.Components;
-using Dnn.PersonaBar.Pages.Components.Exceptions;
-using Dnn.PersonaBar.Pages.Components.Dto;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Entities.Tabs;
-using DotNetNuke.Security.Permissions;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
+using Dnn.PersonaBar.Pages.Components;
+using Dnn.PersonaBar.Pages.Components.Exceptions;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetPageTool : ITool
+    public class GetPageTool : IMcpProvider
     {
-        public string Name => "Get Page";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-page",
+                Title = "Get Page",
+                Description = "Get details of an existing page from DNN portal",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "pageId",
+                        Description = "The ID of the page to retrieve",
+                        Required = true,
+                        Type = "number"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var pageId = Convert.ToInt32(arguments["pageId"]);
+                    var result = GetPage(pageId);
 
-        public string Description => "Get details of an existing page from DNN portal";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetPageTool).GetMethod(nameof(GetPage));
-
-        public static string GetPage(int pageId)
+        public string GetPage(int pageId)
         {
             try
             {

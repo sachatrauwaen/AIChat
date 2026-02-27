@@ -1,0 +1,692 @@
+<template>
+  <div class="chat-layout">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <h3>Conversations</h3>
+        <button class="btn" @click="newConversation">New Chat</button>
+      </div>
+      <ul class="conversation-list">
+        <li
+          v-for="c in conversations"
+          :key="c.id"
+          :class="{ active: c.id === conversationId }"
+        >
+          <div class="conv-row" @click="loadConv(c.id)">
+            <div class="title">{{ c.title }}</div>
+            <div class="meta">{{ formatDate(c.lastModified || c.createdAt) }}</div>
+          </div>
+          <button class="delete-btn" title="Delete" @click.stop="deleteConv(c.id)">&times;</button>
+        </li>
+      </ul>
+      <div class="sidebar-bottom" style="display: flex; gap: 8px;">
+        <button class="btn settings-btn" @click="openSettings" style="flex: 1;">
+          <span class="settings-icon">⚙</span>
+          <span>Settings</span>
+        </button>
+        <button class="btn settings-btn" @click="openMcpSettings" style="flex: 1;">
+          <span class="settings-icon">🔌</span>
+          <span>MCP</span>
+        </button>
+      </div>
+    </aside>
+    <main class="chat-main">
+      <div class="messages" ref="messagesEl">
+        <div v-if="!filteredMessages.length" class="new-chat-intro">
+          <h1 class="chat-intro-title">How can I help you today?</h1>
+          <h3 class="chat-intro-subtitle">I am your DNN AI assistant.</h3>
+          <div class="new-chat-buttons">
+            <button
+              class="chat-suggestion-btn"
+              @click="userInput='List pages of this website'"
+            >
+              List pages of this website
+            </button>
+            <button
+              class="chat-suggestion-btn"
+              @click="userInput='Send a email with a joke to info@example.com'"
+            >
+              Send a email
+            </button>
+            <button
+              class="chat-suggestion-btn"
+              @click="userInput='Generate a seo report of the home page in a table'"
+            >
+              Make a seo report of the home page
+            </button>
+          </div>
+        </div>
+        <div v-else>
+          <div v-for="(m, idx) in filteredMessages" :key="idx" class="message" :class="m.role">
+            <template v-if="m.role === 'tool'">
+              <details class="tool-history">
+                <summary class="tool-summary">
+                  <span class="tool-badge">Tool</span>
+                  <strong>{{ m.toolName }}</strong>
+                </summary>
+                <div class="tool-history-body">
+                  <div v-if="m.toolArguments" class="tool-history-section">
+                    <div class="tool-history-label">Arguments</div>
+                    <pre class="tool-history-pre">{{ JSON.stringify(m.toolArguments, null, 2) }}</pre>
+                  </div>
+                  <div v-if="m.content" class="tool-history-section">
+                    <div class="tool-history-label">Result</div>
+                    <pre class="tool-history-pre">{{ m.content }}</pre>
+                  </div>
+                </div>
+              </details>
+            </template>
+            <template v-else>
+              <div class="role-label">{{ m.role }}</div>
+              <div class="content" v-html="renderMarkdown(m.content)"></div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="toolCall" class="tool-confirm">
+        <div class="tool-header">
+          <span class="tool-badge">Tool</span>
+          <strong>{{ toolCall.name }}</strong>
+        </div>
+        <pre v-if="toolCall.description" class="tool-args">{{ toolCall.description }}</pre>
+        <div class="tool-actions">
+          <button class="btn primary" :disabled="isThinking" @click="runTool">
+            {{ isThinking ? "Running..." : "Run" }}
+          </button>
+          <button class="btn" :disabled="isThinking" @click="cancelTool">Cancel</button>
+        </div>
+      </div>
+
+      <div class="input-panel">
+        <div class="input-row">
+          <textarea
+            v-model="userInput"
+            class="input"
+            rows="3"
+            placeholder="Ask a question..."
+            @keydown.enter.exact.prevent="send"
+          />
+          
+        </div>
+        <div class="input-footer">
+          <span v-if="totalPrice" class="price-info">
+            ${{ totalPrice.toFixed(5) }} ({{ totalInputTokens }} in / {{ totalOutputTokens }} out)
+          </span>
+          <select v-model="selectedMode" class="mode-select">
+            <option value="chat">Chat</option>
+            <option value="readonly">Agent (Read Only)</option>
+            <option value="agent">Agent (Read/Write)</option>
+          </select>
+          <button class="btn primary" :disabled="isThinking || !userInput || !!toolCall" @click="send">
+            {{ isThinking ? "Thinking..." : "Send" }}
+          </button>
+        </div>
+        <div v-if="error" class="error">{{ error }}</div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<script>
+import { marked } from "marked";
+import DOMPurify from "dompurify";
+import { tornadoChat, getConversations, loadConversation, deleteConversation } from "../api/aiTornadoService";
+
+export default {
+  computed: {
+    filteredMessages() {
+      return this.messages.filter(m =>
+        !(m.role === 'user' && m.content && m.content.startsWith('[Tool Result for '))
+      );
+    }
+  },
+  data() {
+    return {
+      conversations: [],
+      conversationId: null,
+      messages: [],
+      userInput: "",
+      isThinking: false,
+      error: "",
+      toolCall: null,
+      selectedMode: "readonly",
+      totalPrice: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0
+    };
+  },
+  mounted() {
+    this.fetchConversations();
+  },
+  methods: {
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const el = this.$refs.messagesEl;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+    async fetchConversations() {
+      try {
+        this.conversations = await getConversations();
+      } catch (e) {
+        this.error = e.message || "Failed to load conversations.";
+      }
+    },
+    async loadConv(id) {
+      try {
+        const res = await loadConversation(id);
+        if (res.success) {
+          this.conversationId = res.conversationId;
+          this.messages = res.messages || [];
+          this.toolCall = null;
+          this.error = "";
+          this.scrollToBottom();
+        } else {
+          this.error = res.message || "Failed to load conversation.";
+        }
+      } catch (e) {
+        this.error = e.message || "Failed to load conversation.";
+      }
+    },
+    async deleteConv(id) {
+      try {
+        await deleteConversation(id);
+        this.conversations = this.conversations.filter(c => c.id !== id);
+        if (this.conversationId === id) {
+          this.newConversation();
+        }
+      } catch (e) {
+        this.error = e.message || "Failed to delete.";
+      }
+    },
+    newConversation() {
+      this.conversationId = null;
+      this.messages = [];
+      this.userInput = "";
+      this.error = "";
+      this.toolCall = null;
+      this.totalPrice = 0;
+      this.totalInputTokens = 0;
+      this.totalOutputTokens = 0;
+    },
+    async send() {
+      if (!this.userInput || this.toolCall) return;
+      this.isThinking = true;
+      this.error = "";
+      try {
+        const res = await tornadoChat({
+          conversationId: this.conversationId,
+          message: this.userInput,
+          runTool: false,
+          toolCallId: null,
+          toolName: null,
+          toolArguments: null,
+          mode: this.selectedMode,
+          rules: ""
+        });
+        this.isThinking = false;
+        if (res.success) {
+          this.conversationId = res.conversationId;
+          this.messages = res.messages || [];
+          this.toolCall = res.toolCall || null;
+          this.totalPrice = res.totalPrice || 0;
+          this.totalInputTokens = res.totalInputTokens || 0;
+          this.totalOutputTokens = res.totalOutputTokens || 0;
+          this.userInput = "";
+          this.scrollToBottom();
+          await this.fetchConversations();
+        } else {
+          this.error = res.message || "Request failed.";
+        }
+      } catch (e) {
+        this.isThinking = false;
+        this.error = e.message || "Request failed.";
+      }
+    },
+    async runTool() {
+      if (!this.toolCall) return;
+      await this.respondToTool(true);
+    },
+    async cancelTool() {
+      if (!this.toolCall) return;
+      await this.respondToTool(false);
+    },
+    async respondToTool(approved) {
+      this.isThinking = true;
+      this.error = "";
+      try {
+        const res = await tornadoChat({
+          conversationId: this.conversationId,
+          message: null,
+          runTool: true,
+          toolApproved: approved,
+          toolCallId: this.toolCall.id,
+          toolName: this.toolCall.name,
+          toolArguments: this.toolCall.arguments,
+          mode: this.selectedMode,
+          rules: ""
+        });
+        this.isThinking = false;
+        if (res.success) {
+          this.conversationId = res.conversationId;
+          this.messages = res.messages || [];
+          this.toolCall = res.toolCall || null;
+          this.totalPrice = res.totalPrice || 0;
+          this.totalInputTokens = res.totalInputTokens || 0;
+          this.totalOutputTokens = res.totalOutputTokens || 0;
+          this.scrollToBottom();
+        } else {
+          this.error = res.message || "Tool operation failed.";
+        }
+      } catch (e) {
+        this.isThinking = false;
+        this.error = e.message || "Tool operation failed.";
+      }
+    },
+    openSettings() {
+      this.$emit("open-settings");
+    },
+    openMcpSettings() {
+      this.$emit("open-mcp-settings");
+    },
+    renderMarkdown(text) {
+      return DOMPurify.sanitize(marked.parse(text || ""));
+    },
+    formatDate(value) {
+      if (!value) return "";
+      return new Date(value).toLocaleString();
+    }
+  }
+};
+</script>
+
+<style scoped>
+.chat-layout {
+  display: flex;
+  height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sidebar {
+  width: 260px;
+  border-right: 1px solid #ddd;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.sidebar-top {
+  margin-bottom: 12px;
+}
+
+.conversation-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conversation-list li {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.conversation-list li:hover {
+  background: #f0f0f0;
+}
+
+.conversation-list li.active {
+  background: #e3f2fd;
+}
+
+.conv-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-list .title {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-list .meta {
+  font-size: 11px;
+  color: #666;
+}
+
+.sidebar-bottom {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #999;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.delete-btn:hover {
+  color: #b71c1c;
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.new-chat-intro {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.new-chat-intro h1 {
+  margin-top: 40px;
+  margin-bottom: 8px;
+}
+
+.new-chat-intro h3 {
+  margin-top: 0;
+  color: #555;
+  font-weight: 400;
+}
+
+.chat-intro-title {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.chat-intro-subtitle {
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.new-chat-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.chat-suggestion-btn {
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+
+.chat-suggestion-btn:hover {
+  background: #f5f5f5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.chat-suggestion-btn:active {
+  transform: translateY(1px);
+}
+
+.message {
+  margin-bottom: 12px;
+}
+
+.message .role-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.message.user .content {
+  background: #e3f2fd;
+}
+
+.message.assistant .content {
+  background: #f5f5f5;
+}
+
+.content {
+  padding: 8px 10px;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.content :deep(pre) {
+  background: #f6f8fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.content :deep(code) {
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+}
+
+.content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.content :deep(th),
+.content :deep(td) {
+  border: 1px solid #dfe2e5;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.message.tool {
+  margin-bottom: 6px;
+}
+
+.tool-history {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #f9f9f9;
+  overflow: hidden;
+}
+
+.tool-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-size: 13px;
+}
+
+.tool-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-summary::before {
+  content: "▶";
+  font-size: 10px;
+  color: #888;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.tool-history[open] .tool-summary::before {
+  transform: rotate(90deg);
+}
+
+.tool-history-body {
+  border-top: 1px solid #e0e0e0;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-history-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #888;
+  font-weight: 600;
+}
+
+.tool-history-pre {
+  background: #f0f0f0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin: 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tool-confirm {
+  border-top: 1px solid #ddd;
+  padding: 12px 16px;
+  background: #fffde7;
+}
+
+.tool-header {
+  margin-bottom: 6px;
+}
+
+.tool-badge {
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+
+.tool-args {
+  background: #f6f8fa;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-height: 120px;
+  overflow: auto;
+  margin: 6px 0;
+}
+
+.tool-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.input-panel {
+  border-top: 1px solid #ddd;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  padding: 8px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.mode-select {
+  width: 160px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.input-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.price-info {
+  font-size: 11px;
+  color: #666;
+}
+
+.settings-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.settings-icon {
+  font-size: 14px;
+}
+
+.btn {
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn.primary {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: #b71c1c;
+  font-size: 12px;
+}
+</style>

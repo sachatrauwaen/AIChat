@@ -453,7 +453,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
         }
 
-        private string GenerateSystemPrompt(ChatToolRequest request, List<Tool> tools, ToolsService toolsService)
+        private string GenerateSystemPrompt(ChatToolRequest request, List<Tool> tools/*, ToolsService toolsService*/)
         {
             var application = DotNetNuke.Application.DotNetNukeContext.Current.Application;
             var controlBarController = DotNetNuke.Web.Components.Controllers.ControlBarController.Instance;
@@ -465,14 +465,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var ps = PortalSettings;
             var portalcontext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
             var folders = new List<string>();
-            foreach (var tool in tools)
-            {
-                var rulesFolder = toolsService.GetToolFolder(tool.Name);
-                if (!string.IsNullOrEmpty(rulesFolder) && !folders.Contains(rulesFolder))
-                {
-                    folders.Add(rulesFolder.Replace("/", "\\").Trim('\\'));
-                }
-            }
+            //foreach (var tool in tools)
+            //{
+            //    var rulesFolder = toolsService.GetToolFolder(tool.Name);
+            //    if (!string.IsNullOrEmpty(rulesFolder) && !folders.Contains(rulesFolder))
+            //    {
+            //        folders.Add(rulesFolder.Replace("/", "\\").Trim('\\'));
+            //    }
+            //}
             var airules = string.Empty;
             foreach (var rulesFolder in folders)
             {

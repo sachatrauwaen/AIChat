@@ -1,31 +1,90 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using Dnn.PersonaBar.Library.Security;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using DotNetNuke.Entities.Portals;
+using DotNetNuke.Entities.Tabs;
+using Dnn.Mcp.WebApi;
 using Dnn.PersonaBar.Pages.Components;
 using Dnn.PersonaBar.Pages.Components.Exceptions;
 using Dnn.PersonaBar.Pages.Components.Prompt.Models;
-using DotNetNuke.Entities.Portals;
-using DotNetNuke.Entities.Tabs;
-using DotNetNuke.Security.Permissions;
-using Newtonsoft.Json;
 
 namespace Satrabel.AIChat.Tools
 {
-    class AddPageTool : ITool
+    public class AddPageTool : IMcpProvider
     {
-        public string Name => "Add Page";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "add-page",
+                Title = "Add Page",
+                Description = "Add a new page to DNN portal",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "pageName",
+                        Description = "The name of the page to create",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "pageTitle",
+                        Description = "The title of the page",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "description",
+                        Description = "The description of the page",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "parentId",
+                        Description = "The ID of the parent page (-1 for root level)",
+                        Required = false,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "visible",
+                        Description = "Whether the page should be visible in the menu",
+                        Required = false,
+                        Type = "boolean"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var pageName = arguments["pageName"].ToString();
+                    var pageTitle = arguments.ContainsKey("pageTitle") ? arguments["pageTitle"].ToString() : "";
+                    var description = arguments.ContainsKey("description") ? arguments["description"].ToString() : "";
+                    var parentId = arguments.ContainsKey("parentId") ? Convert.ToInt64(arguments["parentId"]) : -1;
+                    var visible = arguments.ContainsKey("visible") ? Convert.ToBoolean(arguments["visible"]) : true;
+                    
+                    var result = AddPage(pageName, pageTitle, description, parentId, visible);
 
-        public string Description => "Add a new page to DNN portal";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(AddPageTool).GetMethod(nameof(AddPage));
-
-        public static string AddPage(string pageName, string pageTitle = "", string description = "", Int64 parentId = -1, bool visible = true)
+        public string AddPage(string pageName, string pageTitle = "", string description = "", Int64 parentId = -1, bool visible = true)
         {
             try
             {

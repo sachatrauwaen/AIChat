@@ -5,7 +5,7 @@
             <div class="d-flex gap-2">
                 <h2 class="ps-2">AI Assistant</h2>
                 
-                <small v-if="totalPrice" class="text-muted  position-absolute top-0 mt-2" style="right: 300px;">Total price: ${{totalPrice.toFixed(5)}} ({{totalInputTokens}} input / {{cacheCreationInputTokens}} cache creation / {{cacheReadInputTokens}} cache read / {{totalOutputTokens}} output tokens)</small>
+                <small v-if="totalPrice" class="text-muted  position-absolute top-0 mt-2" style="right: 300px;">Total price: ${{totalPrice.toFixed(5)}} ({{totalInputTokens}} input / {{totalOutputTokens}} output tokens)</small>
                 
                 <button class="btn btn-secondary position-absolute top-0 mt-2" style="right: 80px;" type="button" @click="clear" >
                     New Chat
@@ -16,27 +16,7 @@
             </div>
         </div>
         <div v-for="(msg, i) in messages" :key="i">
-            <div v-if="msg.contentType === 'tool_result'">
-                <p>
-                <button class="btn btn-outline-secondary" type="button" @click="toggleVisible(i)" aria-expanded="false" aria-controls="collapseWidthExample">                    
-                    <span><span class="badge text-bg-dark">Tool</span> {{msg.toolName}}</span>
-                </button>
-                </p>
-                <div style="min-height: 120px;" v-if="visibleMessages.includes(i)">                    
-                        <div class="card card-body" >
-                            <div>
-                                Request
-                                <pre><code class="language-none" v-html="msg.toolFullname" ></code></pre>                                
-                            </div>
-                            <hr />
-                            <div>
-                                Response
-                                <pre><code class="language-none" v-html="msg.content" ></code></pre>
-                            </div>
-                        </div>                    
-                </div>  
-            </div>                               
-            <div v-else-if="msg.role === 'assistant'">
+            <div v-if="msg.role === 'assistant'">
                 <VueMarkdown :source="msg.content" />
             </div>
             <div v-else>
@@ -44,15 +24,12 @@
                     <span class="badge text-bg-light">&#128100;</span> {{ msg.content }}
                 </div>
             </div>
-            <!--
-            <small v-if="msg.price" class="text-muted">{{msg.price}}</small>
-            -->
         </div>
-        <div v-if="tool">
+        <div v-if="toolCall">
             <div class="alert alert-light" role="alert">
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-secondary" type="button" @click="toolMore = !toolMore" >                    
-                        <span><span class="badge text-bg-dark">Tool</span> {{tool.name}}</span>
+                        <span><span class="badge text-bg-dark">Tool</span> {{toolCall.name}}</span>
                     </button>
                     <div v-if="isThinking" class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -67,7 +44,7 @@
                     </div>                    
                 </div>
                 <div v-if="toolMore" class="mt-2">
-                    <pre><code class="language-none" v-html="tool.fullname" ></code></pre>
+                    <pre><code class="language-none">{{ toolCall.description }}</code></pre>
                 </div>
             </div>
         </div>
@@ -82,7 +59,7 @@
             </div>
             <div class="card card-body border-radius-5">
                 <div class="d-flex gap-2">
-                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />
+                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage"  placeholder="Type your message..." />
                     
                 </div>
                 <div class="d-flex gap-2 pt-2 justify-content-end">
@@ -92,12 +69,6 @@
                         <option v-for="r in rules" :key="r"  :value="r">{{r}}</option>
                        
                     </select>
-                    <!--
-                    <select class="form-select _form-select-sm" style="width: 100px;" v-model="selectedModel">
-                        <option v-for="m in models" :key="m.value"  :value="m.value">{{m.name}}</option>
-                       
-                    </select>
-                    -->
                     <select class="form-select _form-select-sm" style="width: 150px;" v-model="selectedMode">
                         <option value="chat">Chat</option>
                         <option value="readonly">Agent (Read Only)</option>
@@ -108,7 +79,7 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <div v-else>
-                            <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                            <button class="btn btn-primary" @click="sendMessage" :disabled="toolCall">Send</button>
                         </div>
                     </div>
                 </div>
@@ -120,7 +91,7 @@
         <div v-else class="row position-fixed bottom-0 bg-white p-2 gap-2" style="z-index: 1000;width: 860px;">
             <div class="card card-body">
                 <div class="d-flex gap-2">
-                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage(false)"  placeholder="Type your message..." />                                    
+                    <input class="form-control border-0" v-model="userInput" @keyup.enter="sendMessage"  placeholder="Type your message..." />                                    
                 </div>
                 <div class="d-flex gap-2 pt-2 justify-content-end">
                     <div class="d-flex gap-2 text-danger mt-1" v-if="selectedMode === 'agent'">
@@ -142,7 +113,7 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <div v-else>
-                            <button class="btn btn-primary" @click="sendMessage(false)" :disabled="tool">Send</button>
+                            <button class="btn btn-primary" @click="sendMessage" :disabled="toolCall">Send</button>
                         </div>
                     </div>
                 </div>
@@ -175,28 +146,20 @@ export default {
     },
     data() {
         return {
+            conversationId: null,
             messages: [],
             userInput: '',
             message: '',
             isThinking: false,
-            visibleMessages: [],
-            aMessages: [],
-            aResponse:{},
-            tool:null,
-            toolMore:false,            
-            selectedMode:'readonly',
-            settings:false,
-            rules:[],
-            models:[],
-            selectedModel:'claude-3-5-sonnet-latest',
-            selectedRule:'',
-            totalPrice:0,
-            totalInputTokens:0,
-            totalOutputTokens:0,
-            cacheCreationInputTokens:0,
-            cacheReadInputTokens:0,
-            autoReadonlyTools: false,
-            autoWriteTools: false
+            toolCall: null,
+            toolMore: false,            
+            selectedMode: 'readonly',
+            settings: false,
+            rules: [],
+            selectedRule: '',
+            totalPrice: 0,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
         };
     },
     methods: {
@@ -204,10 +167,7 @@ export default {
             this.isThinking = true;
             AIChatService.getInfo(data => {
                 if (data.success) {
-                    this.models = data.models || '';
                     this.rules = data.rules || [];
-                    this.autoReadonlyTools = data.autoReadonlyTools || false;
-                    this.autoWriteTools = data.autoWriteTools || false;
                 } else {
                     this.message = data.message;
                 }
@@ -221,81 +181,89 @@ export default {
             });
         },
         closeSettings(){
-            this.settings=false;
+            this.settings = false;
             this.loadInfo();
         },
         clear() {
+            this.conversationId = null;
             this.messages = [];
             this.message = '';
-            this.tool = null;
+            this.toolCall = null;
             this.toolMore = false;
-        },
-        toggleVisible(i) {
-            if (this.visibleMessages.includes(i)) {
-                this.visibleMessages = this.visibleMessages.filter(m => m !== i);
-            } else {
-                this.visibleMessages.push(i);
-                this.$nextTick(() => {
-                        Prism.highlightAll();
-                    });
-            }
+            this.totalPrice = 0;
+            this.totalInputTokens = 0;
+            this.totalOutputTokens = 0;
         },
         runTool() {
-           this.sendMessage(true);
-        },
-        cancelTool() {
-            this.tool = null;
-            this.toolMore = false;
-            const lastMessage = this.messages[this.messages.length - 1];
-            lastMessage.AContent.pop();
-        },
-        sendMessage(runTool = false) {
-            if (!this.userInput && !runTool) return;
-
-            if (!runTool) {
-                this.messages.push({ role: 'user', content: this.userInput });
-            }
+            if (!this.toolCall) return;
             this.message = '';
             this.toolMore = false;
             this.isThinking = true;
 
-            AIChatService.ChatWithTools({ 
-                messages : this.messages,
-                aMessages: this.aMessages,
-                aResponse: this.aResponse,
-                runTool: runTool,
-                toolUse: runTool ? this.tool.toolUse : null,
+            AIChatService.TornadoChat({
+                conversationId: this.conversationId || null,
+                message: null,
+                runTool: true,
+                toolCallId: this.toolCall.id,
+                toolName: this.toolCall.name,
+                toolArguments: this.toolCall.arguments,
                 mode: this.selectedMode,
                 rules: this.selectedRule
             }, data => {
                 this.isThinking = false;
                 if (data.success) {
                     this.message = '';
-                    
-                    this.messages = data.messages;
-                    this.userInput = '';
-                    this.aMessages = data.aMessages;
-                    this.aResponse = data.aResponse;
-                    this.tool = data.tool;
+                    this.conversationId = data.conversationId;
+                    this.messages = data.messages || [];
+                    this.toolCall = data.toolCall || null;
                     this.totalPrice = data.totalPrice;
                     this.totalInputTokens = data.totalInputTokens;
                     this.totalOutputTokens = data.totalOutputTokens;
-                    this.cacheCreationInputTokens = data.cacheCreationInputTokens;
-                    this.cacheReadInputTokens = data.cacheReadInputTokens;
-                    this.$nextTick(() => {
-                        Prism.highlightAll();
-                    });
-                    if (this.autoReadonlyTools && this.tool && this.tool.readOnly ) {
-                        this.runTool();
-                    } else if (this.autoWriteTools && this.tool) {
-                        this.runTool();
-                    }
+                    this.$nextTick(() => { Prism.highlightAll(); });
+                } else {
+                    this.message = data.message;
+                }
+            }, this.errorCallback);
+        },
+        cancelTool() {
+            this.toolCall = null;
+            this.toolMore = false;
+        },
+        sendMessage() {
+            if (!this.userInput) return;
+
+            this.message = '';
+            this.toolMore = false;
+            this.isThinking = true;
+
+            AIChatService.TornadoChat({
+                conversationId: this.conversationId || null,
+                message: this.userInput,
+                runTool: false,
+                toolCallId: null,
+                toolName: null,
+                toolArguments: null,
+                mode: this.selectedMode,
+                rules: this.selectedRule
+            }, data => {
+                this.isThinking = false;
+                if (data.success) {
+                    this.message = '';
+                    this.userInput = '';
+                    this.conversationId = data.conversationId;
+                    this.messages = data.messages || [];
+                    this.toolCall = data.toolCall || null;
+                    this.totalPrice = data.totalPrice;
+                    this.totalInputTokens = data.totalInputTokens;
+                    this.totalOutputTokens = data.totalOutputTokens;
+                    this.$nextTick(() => { Prism.highlightAll(); });
                 } else {
                     this.message = data.message;
                 }
             }, this.errorCallback);
         },
         errorCallback(error) {
+            this.isThinking = false;
             this.message = error && error.message ? error.message : 'An error occurred.';
         }
     }
@@ -303,7 +271,6 @@ export default {
 </script>
 
 <style scoped>
-/* Basic styling for the markdown content */
 :deep(.markdown-body) {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     line-height: 1.6;
@@ -358,4 +325,4 @@ export default {
     margin: 0;
     padding: 0 16px;
 }
-</style> 
+</style>

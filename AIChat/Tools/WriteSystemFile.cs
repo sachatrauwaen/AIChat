@@ -1,27 +1,69 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using System.Reflection;
 using DotNetNuke.Entities.Portals;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class WriteSystemFileTool : ITool
+    public class WriteSystemFileTool : IMcpProvider
     {
-        public string Name => "Write System File";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "write-system-file",
+                Title = "Write System File",
+                Description = "Write to a portal system file",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "filePath",
+                        Description = "The path of the system file to write to",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "content",
+                        Description = "The content to write to the file",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var filePath = arguments["filePath"].ToString();
+                    var content = arguments["content"].ToString();
+                    var result = WriteSystemFile(filePath, content);
 
-        public string Description => "Write to a portal system file";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(WriteSystemFileTool).GetMethod(nameof(WriteSystemFile));
-
-        public static string WriteSystemFile(string filePath, string content)
+        public string WriteSystemFile(string filePath, string content)
         {
             try
             {

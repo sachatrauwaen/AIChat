@@ -1,39 +1,62 @@
-﻿
+
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using System.Reflection;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
-using DotNetNuke.Entities.Tabs;
 using Newtonsoft.Json;
-
+using Dnn.Mcp.WebApi;
 using ModulesControllerLibrary = Dnn.PersonaBar.Library.Controllers.ModulesController;
 using DotNetNuke.Entities.Modules;
 using System.Xml;
 using DotNetNuke.Framework;
-using DotNetNuke.Common;
-using System.IO;
 using DotNetNuke.Common.Utilities;
-using System.Web.UI.WebControls;
 using System.Net;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetModulesTool : ITool
+    public class GetModulesTool : IMcpProvider
     {
-        public string Name => "Get Modules";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-modules",
+                Title = "Get Modules",
+                Description = "Get list of modules of page",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page to get modules from",
+                        Required = true,
+                        Type = "number"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var tabId = Convert.ToInt64(arguments["tabId"]);
+                    var result = GetModules(tabId);
 
-        public string Description => "Get list of modules of page";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetModulesTool).GetMethod(nameof(GetModules));
-
-        public static string GetModules(Int64 tabId)
+        public string GetModules(Int64 tabId)
         {
             var modules = ModulesControllerLibrary.Instance.GetModules(PortalSettings.Current,
                 false, out int total, null, null, (int)tabId, 0, 1000);
@@ -45,7 +68,7 @@ namespace Satrabel.AIChat.Tools
                 t.DesktopModule.ModuleName,
                 t.ModuleTitle,
                 t.PaneName,
-                // Data = GetData(t)
+                 //Data = GetData(t)
             }));
         }
 

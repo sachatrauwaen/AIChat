@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\DNN910\packages\LibSassHost.Native.win-x64.1.3.3\build\LibSassHost.Native.win-x64.props" Condition="Exists('..\DNN910\packages\LibSassHost.Native.win-x64.1.3.3\build\LibSassHost.Native.win-x64.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -13,6 +13,8 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <WebGreaseLibPath>packages\WebGrease.1.5.2\lib</WebGreaseLibPath>
@@ -37,6 +39,9 @@
   <ItemGroup>
     <Reference Include="AdvancedStringBuilder, Version=0.1.0.0, Culture=neutral, PublicKeyToken=e818a2fc08933ddb, processorArchitecture=MSIL">
       <HintPath>...\DNN910\packages\AdvancedStringBuilder.0.1.0\lib\net45\AdvancedStringBuilder.dll</HintPath>
+    </Reference>
+    <Reference Include="AngleSharp, Version=1.4.0.0, Culture=neutral, PublicKeyToken=e83494dcdc6d31ea, processorArchitecture=MSIL">
+      <HintPath>..\packages\AngleSharp.1.4.0\lib\net472\AngleSharp.dll</HintPath>
     </Reference>
     <Reference Include="Dnn.PersonaBar.Extensions, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -63,6 +68,9 @@
     <Reference Include="DotNetNuke.WebUtility, Version=4.2.1.783, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DotNetNuke.Web.9.10.2\lib\net45\DotNetNuke.WebUtility.dll</HintPath>
     </Reference>
+    <Reference Include="LlmTornado, Version=3.0.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\LlmTornado.3.8.51\lib\net462\LlmTornado.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.ApplicationBlocks.Data, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DotNetNuke.Core.9.10.2\lib\net45\Microsoft.ApplicationBlocks.Data.dll</HintPath>
     </Reference>
@@ -83,13 +91,44 @@
       <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.8.0.0\lib\net462\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
     <Reference Include="System.Net.Http.Formatting, Version=5.2.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.7\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime, Version=4.1.1.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.4.3.1\lib\net462\System.Runtime.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encoding.CodePages, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encoding.CodePages.8.0.0\lib\net462\System.Text.Encoding.CodePages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.6\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -118,12 +157,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Apis\AIChatController.cs" />
     <Compile Include="Apis\Dto\ChatRequest.cs" />
     <Compile Include="Apis\Dto\ChatResponse.cs" />
     <Compile Include="Apis\Dto\ChatToolRequest.cs" />
     <Compile Include="Apis\Dto\ContentDto.cs" />
     <Compile Include="Apis\Dto\RuleDto.cs" />
+    <Compile Include="Apis\Dto\TornadoDeleteConversationRequest.cs" />
     <Compile Include="Apis\Extensions.cs" />
     <Compile Include="Apis\Dto\SettingsDto.cs" />
     <Compile Include="Apis\Dto\MarkdownPreferences.cs" />
@@ -131,6 +170,7 @@
     <Compile Include="Apis\Dto\InfoDto.cs" />
     <Compile Include="Apis\Dto\ModelDto.cs" />
     <Compile Include="Apis\Dto\ToolDto.cs" />
+    <Compile Include="Apis\TornadoDeleteConversationResult.cs" />
     <Compile Include="History\ChatConversation.cs" />
     <Compile Include="History\ChatHistoryManager.cs" />
     <Compile Include="History\ChatMessage.cs" />
@@ -148,10 +188,47 @@
     <Compile Include="ContextWindow\TokenEstimationMethod.cs" />
     <Compile Include="ContextWindow\TokenEstimator.cs" />
     <Compile Include="ContextWindow\TrimmingStrategy.cs" />
+    <Compile Include="Mcp\Apis\DnnMcpController.cs" />
+    <Compile Include="Mcp\Apis\Dto\InfoDto.cs" />
+    <Compile Include="Mcp\Apis\Dto\RuleDto.cs" />
+    <Compile Include="Mcp\Apis\Dto\SettingsDto.cs" />
+    <Compile Include="Mcp\Apis\Dto\ToolDto.cs" />
+    <Compile Include="Mcp\Apis\ServiceRouteMapper.cs" />
+    <Compile Include="Mcp\Models\JsonRpcModels.cs" />
+    <Compile Include="Mcp\Models\McpModels.cs" />
+    <Compile Include="Mcp\Models\ToolExecutionRequest.cs" />
+    <Compile Include="Mcp\Models\ToolExecutionResult.cs" />
+    <Compile Include="Mcp\Models\ToolListResponse.cs" />
+    <Compile Include="Mcp\Prompts\PromptProvider.cs" />
+    <Compile Include="Mcp\Prompts\PromptsExtensions.cs" />
+    <Compile Include="Mcp\Prompts\RulesPromptProvider.cs" />
+    <Compile Include="Mcp\Resources\ResourceProvider.cs" />
+    <Compile Include="Mcp\Resources\ResourcesExtensions.cs" />
+    <Compile Include="Mcp\Services\DnnToolExecutor.cs" />
+    <Compile Include="Mcp\Services\IMcpRegistry.cs" />
+    <Compile Include="Mcp\Services\McpHandler.cs" />
+    <Compile Include="Mcp\Services\McpRegistry.cs" />
+    <Compile Include="Models\CallToolResult.cs" />
+    <Compile Include="Models\ContentBlock.cs" />
+    <Compile Include="Models\PromptDefinition.cs" />
+    <Compile Include="Models\ResourceDefinition.cs" />
+    <Compile Include="Models\TextContentBlock.cs" />
+    <Compile Include="Models\ToolDefinition.cs" />
+    <Compile Include="Models\ToolParameter.cs" />
     <Compile Include="Services\AnthropicService.cs" />
-    <Compile Include="Services\ToolsService.cs" />
+    <Compile Include="Services\IMcpProvider.cs" />
+    <Compile Include="Services\ModuleInitializer.cs" />
+    <Compile Include="Services\MyAutoToolChoice.cs" />
+    <Compile Include="Services\TornadoChatService.cs" />
+    <Compile Include="Services\TornadoToolsService.cs" />
     <Compile Include="Apis\Dto\MessageDto.cs" />
+    <Compile Include="Apis\Dto\TornadoChatRequest.cs" />
+    <Compile Include="Apis\Dto\TornadoChatResponse.cs" />
+    <Compile Include="Apis\Dto\TornadoMessageDto.cs" />
+    <Compile Include="Apis\Dto\TornadoToolCallDto.cs" />
+    <Compile Include="Apis\AITornadoController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Startup.cs" />
     <Compile Include="Tools\AddModule.cs" />
     <Compile Include="Tools\AddPage.cs" />
     <Compile Include="Tools\DeletePage.cs" />
@@ -159,15 +236,14 @@
     <Compile Include="Tools\GetFolders.cs" />
     <Compile Include="Tools\GetPage.cs" />
     <Compile Include="Tools\GetSystemFiles.cs" />
-    <Compile Include="Tools\IAIChatTool.cs" />
     <Compile Include="Tools\ReadFile.cs" />
     <Compile Include="Tools\ReadSystemFile.cs" />
-    <Compile Include="Tools\SetHTMLModule.cs" />
-    <Compile Include="Tools\GetHTMLModule.cs" />
     <Compile Include="Tools\GetModules.cs" />
     <Compile Include="Tools\GetPages.cs" />
     <Compile Include="Tools\GetUrlHtml.cs" />
+    <Compile Include="Tools\GetUrlSeo.cs" />
     <Compile Include="Tools\SendEmail.cs" />
+    <Compile Include="Tools\ToolsExtensions.cs" />
     <Compile Include="Tools\UpdatePage.cs" />
     <Compile Include="Tools\WriteFile.cs" />
     <Compile Include="Tools\WriteSystemFile.cs" />

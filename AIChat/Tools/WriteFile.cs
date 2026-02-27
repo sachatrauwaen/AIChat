@@ -1,28 +1,70 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using System.Reflection;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.FileSystem;
 using DotNetNuke.Services.FileSystem.Internal;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class WriteFileTool : ITool
+    public class WriteFileTool : IMcpProvider
     {
-        public string Name => "Write File";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "write-file",
+                Title = "Write File",
+                Description = "Write content to a file using DNN File System APIs",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "filePath",
+                        Description = "The path of the file to write to",
+                        Required = true,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "content",
+                        Description = "The content to write to the file",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var filePath = arguments["filePath"].ToString();
+                    var content = arguments["content"].ToString();
+                    var result = WriteFile(filePath, content);
 
-        public string Description => "Write content to a file using DNN File System APIs";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(WriteFileTool).GetMethod(nameof(WriteFile));
-
-        public static string WriteFile(string filePath, string content)
+        public string WriteFile(string filePath, string content)
         {
             try
             {

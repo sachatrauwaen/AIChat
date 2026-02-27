@@ -32,6 +32,21 @@ class AIChatService {
         const sf = this.getServiceFramework("AIChat");
         sf.post("ChatWithTools", message, callback, errorCallback);
     }
+    
+    TornadoChat(message, callback, errorCallback) {
+        const sf = this.getServiceFramework("AITornado");
+        sf.post("Chat", message, callback, errorCallback);
+    }
+
+    GetConversations(callback, errorCallback) {
+        const sf = this.getServiceFramework("AITornado");
+        sf.get("GetConversations", {}, callback, errorCallback);
+    }
+
+    LoadConversation(id, callback, errorCallback) {
+        const sf = this.getServiceFramework("AITornado");
+        sf.get("LoadConversation", { id }, callback, errorCallback);
+    }
    
 }
 

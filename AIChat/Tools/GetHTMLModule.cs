@@ -1,144 +1,107 @@
-﻿
+using Dnn.Mcp.WebApi;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using DotNetNuke.Common.Utilities;
+using DotNetNuke.Entities.Modules;
+using DotNetNuke.Entities.Portals;
+using DotNetNuke.Modules.Html;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-using AnthropicClient.Models;
 using System.Reflection;
-using DotNetNuke.Entities.Portals;
-using DotNetNuke.Entities.Tabs;
-using Newtonsoft.Json;
-
-using ModulesControllerLibrary = Dnn.PersonaBar.Library.Controllers.ModulesController;
-using DotNetNuke.Entities.Modules;
-using System.Xml;
-using DotNetNuke.Framework;
-using DotNetNuke.Common;
-using System.IO;
-using DotNetNuke.Common.Utilities;
-using System.Web.UI.WebControls;
-using System.Net;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetHTMLModuleTool : ITool
+    /// <summary>
+    /// MCP tool to get HTML content from a DNN HTML module.
+    /// </summary>
+    public class GetHtmlModuleTool : IMcpProvider
     {
-        public string Name => "Get HTML Module content";
-
-        public string Description => "Get content of DNN_HTML module";
-
-        public MethodInfo Function => typeof(GetHTMLModuleTool).GetMethod(nameof(GetModule));
-
-        public static string GetModule(Int64 tabId, Int64 moduleId)
+        public void Register(IMcpRegistry registry)
         {
-            var module = ModulesControllerLibrary.Instance.GetModule(PortalSettings.Current,
-                (int)moduleId, (int)tabId, out KeyValuePair<HttpStatusCode, string> message);
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-html",
+                Title = "Get HTML Module Content",
+                Description = "Get the HTML content from a DNN HTML module",
+                Parameters = new List<ToolParameter>
+                {
+                     new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page containing the module",
+                        Required = true,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "moduleId",
+                        Description = "The ID of the HTML module",
+                        Required = true,
+                        Type = "number"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var moduleId = Convert.ToInt32(arguments["moduleId"]);
+                    int tabId = Convert.ToInt32(arguments["tabId"]);
 
-            if (module == null) return string.Empty;
+                    var result = GetHtml(moduleId, tabId);
 
-            return GetData(module);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
         }
 
-        private static string GetData(ModuleInfo module)
+        /// <summary>
+        /// Gets the HTML content from a DNN HTML module using reflection (DotNetNuke.Modules.Html).
+        /// </summary>
+        public string GetHtml(int moduleId, int tabId)
         {
-            var dataPath= string.Empty;
-            if (module.DesktopModule.ModuleName == "DNN_HTML")
+            try
             {
-                dataPath = "/htmltext/content";
-            }
-            else
-            {
-                return "Error : Only support html module";
-            }
-
-            //else if (module.DesktopModule.ModuleName == "OpenContent")
-            //{
-            //    dataPath = "/opencontent/item/json";
-            //}
-
-            {
-                //var htmlController = new DotNetNuke.Modules.Html.HtmlController();
-                //var htmlModule = htmlController.GetHtml(module.ModuleID);
-                if (!string.IsNullOrEmpty(module.DesktopModule.BusinessControllerClass) && module.DesktopModule.IsPortable)
+                var module = ModuleController.Instance.GetModule(moduleId, tabId, false);
+                if (module == null)
                 {
-                    try
-                    {
-                        var businessControllerType = Reflection.CreateType(module.DesktopModule.BusinessControllerClass);
-
-                        // Double-check
-                        if (typeof(IPortable).IsAssignableFrom(businessControllerType))
-                        {
-
-                            object obj = Reflection.CreateObject(module.DesktopModule.BusinessControllerClass, module.DesktopModule.BusinessControllerClass);
-                            if (!(obj is IPortable portable))
-                            {
-                                return string.Empty;
-                            }
-
-                            string text = Convert.ToString(portable.ExportModule(module.ModuleID));
-                            if (string.IsNullOrEmpty(text))
-                            {
-                                return string.Empty;
-                            }
-
-                            XmlDocument contentXml = new XmlDocument { XmlResolver = null };
-                            contentXml.LoadXml(text);
-                            XmlNode specificNode = contentXml.SelectSingleNode(dataPath);
-                            if (specificNode != null)
-                            {
-                                return specificNode.InnerText; // Retourne le contenu du nœud
-                            }
-
-                            return text;
-                            /*
-
-                            // this.businessControllerProvider = Globals..GetRequiredService<IBusinessControllerProvider>();
-                            XmlDocument moduleXml = new XmlDocument { XmlResolver = null };
-                            XmlNode moduleNode = ModuleController.SerializeModule(moduleXml, module, true);
-                            // var content =  moduleNode["content"].Value;
-
-
-                            if (!string.IsNullOrEmpty(XmlUtils.GetNodeValue(moduleNode.CreateNavigator(), "content")))
-                            {
-                                string content = moduleNode.SelectSingleNode("content").InnerXml;
-                                content = content.Substring(9, content.Length - 12);
-                                var decodedContent = WebUtility.HtmlDecode(content);
-
-                                XmlDocument contentXml = new XmlDocument { XmlResolver = null };
-                                contentXml.LoadXml(decodedContent);
-
-                                // Sélectionner un nœud spécifique par chemin XPath
-                                XmlNode specificNode = contentXml.SelectSingleNode(dataPath);
-                                if (specificNode != null)
-                                {
-                                    return specificNode.InnerText; // Retourne le contenu du nœud
-                                }
-                                return decodedContent;
-                            }
-
-                            //StringWriter sw = new StringWriter();
-                            //XmlTextWriter xw = new XmlTextWriter(sw);
-                            //moduleNode.WriteTo(xw);
-                            //var content = sw.ToString();
-
-                            //return content;
-                            */
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Handle exception
-                        return string.Empty;
-                    }
-
+                    return JsonConvert.SerializeObject(new { error = "Module not found." });
                 }
-            }
-            return string.Empty;
 
+                if (!string.Equals(module.DesktopModule?.ModuleName, "HTML", StringComparison.OrdinalIgnoreCase))
+                {
+                    return JsonConvert.SerializeObject(new { error = "Module is not an HTML module. Only HTML modules are supported." });
+                }
+
+                var controllerInstance = new DotNetNuke.Modules.Html.HtmlTextController();
+                var workflowID = controllerInstance.GetWorkflow(moduleId, tabId, PortalSettings.Current.PortalId).Value;
+                var htmlInfo = controllerInstance.GetTopHtmlText(moduleId, false, workflowID);
+
+                if (htmlInfo == null)
+                {
+                    return JsonConvert.SerializeObject(new { content = "", moduleId });
+                }
+
+                var content = htmlInfo.Content;
+
+                return JsonConvert.SerializeObject(new
+                {
+                    moduleId,
+                    tabId = module.TabID,
+                    content
+                }, Formatting.Indented);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
     }
 }

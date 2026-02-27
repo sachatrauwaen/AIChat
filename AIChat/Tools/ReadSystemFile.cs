@@ -1,27 +1,62 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using System.Reflection;
 using DotNetNuke.Entities.Portals;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class ReadSystemFileTool : ITool
+    public class ReadSystemFileTool : IMcpProvider
     {
-        public string Name => "Read System File";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "read-system-file",
+                Title = "Read System File",
+                Description = "Read content of a portal system file",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "filePath",
+                        Description = "The path of the system file to read",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var filePath = arguments["filePath"].ToString();
+                    var result = ReadSystemFile(filePath);
 
-        public string Description => "Read content of a portal system file ";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(ReadSystemFileTool).GetMethod(nameof(ReadSystemFile));
-
-        public static string ReadSystemFile(string filePath)
+        public string ReadSystemFile(string filePath)
         {
             try
             {
@@ -84,7 +119,7 @@ namespace Satrabel.AIChat.Tools
         }
 
         // Utility method to check if a file is binary
-        private static bool IsBinaryFile(string filePath)
+        private bool IsBinaryFile(string filePath)
         {
             // Common binary file extensions
             string[] binaryExtensions = { ".exe", ".dll", ".pdb", ".zip", ".rar", ".7z", ".doc", ".docx", 

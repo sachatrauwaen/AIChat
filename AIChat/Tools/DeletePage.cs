@@ -1,32 +1,56 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
-using Dnn.PersonaBar.Library.Security;
-using Dnn.PersonaBar.Pages.Components;
-using Dnn.PersonaBar.Pages.Components.Exceptions;
-using Dnn.PersonaBar.Pages.Components.Prompt.Models;
-using Dnn.PersonaBar.Pages.Services.Dto;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Entities.Tabs;
-using DotNetNuke.Security.Permissions;
-using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
+using Dnn.PersonaBar.Pages.Components;
+using Dnn.PersonaBar.Pages.Components.Exceptions;
+using Dnn.PersonaBar.Pages.Services.Dto;
 
 namespace Satrabel.AIChat.Tools
 {
-    class DeletePageTool : ITool
+    public class DeletePageTool : IMcpProvider
     {
-        public string Name => "Delete Page";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "delete-page",
+                Title = "Delete Page",
+                Description = "Delete an existing page from DNN portal",
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page to delete",
+                        Required = true,
+                        Type = "number"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var tabId = Convert.ToInt64(arguments["tabId"]);
+                    var result = DeletePage(tabId);
 
-        public string Description => "Delete an existing page from DNN portal";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(DeletePageTool).GetMethod(nameof(DeletePage));
-
-        public static string DeletePage(Int64 tabId)
+        public string DeletePage(Int64 tabId)
         {
             try
             {

@@ -28,13 +28,18 @@ namespace Satrabel.AIChat.Services
 
         public async Task<AnthropicResult<MessageResponse>> CreateMessageAsync(string system, List<MessageDto> messages, List<Tool> tools)
         {
-
+            ToolChoice toolChoice = null;
+            if (tools != null && tools.Any())
+            {
+                toolChoice = new MyAutoToolChoice();
+            }
             var response = await client.CreateMessageAsync(new MessageRequest(
                       model,
                       GetMessageList(messages),
                       maxTokens: maxTokens,
                       temperature: 0.1m,
                       tools: tools,
+                      toolChoice: toolChoice,
                       // system: system,
                       systemMessages: new List<TextContent> { 
                           new TextContent("Output always in markdown format. When using tools, please use them one at a time and wait for results before making additional tool calls."),

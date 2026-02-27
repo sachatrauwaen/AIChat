@@ -1,27 +1,56 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-using AnthropicClient.Models;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.FileSystem;
 using Newtonsoft.Json;
+using Dnn.Mcp.WebApi;
 
 namespace Satrabel.AIChat.Tools
 {
-    class GetFilesTool : ITool
+    public class GetFilesTool : IMcpProvider
     {
-        public string Name => "Get Files";
+        public void Register(IMcpRegistry registry)
+        {
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "get-files",
+                Title = "Get Files",
+                Description = "Get list of files from a specific folder",
+                ReadOnly = true,
+                Parameters = new List<ToolParameter>
+                {
+                    new ToolParameter
+                    {
+                        Name = "folderPath",
+                        Description = "The path of the folder to get files from (empty for root)",
+                        Required = false,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+                    var folderPath = arguments.ContainsKey("folderPath") ? arguments["folderPath"].ToString() : "";
+                    var result = GetFiles(folderPath);
 
-        public string Description => "Get list of files from a specific folder";
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                        {
+                            new TextContentBlock
+                            {
+                                Text = result
+                            }
+                        }
+                    };
+                }
+            });
+        }
 
-        public MethodInfo Function => typeof(GetFilesTool).GetMethod(nameof(GetFiles));
-
-        public static string GetFiles(string folderPath = "")
+        public string GetFiles(string folderPath = "")
         {
             try
             {
