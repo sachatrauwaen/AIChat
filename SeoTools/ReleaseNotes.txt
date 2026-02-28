@@ -1,0 +1,25 @@
+SEO MCP Tool Provider - Release Notes
+=====================================
+
+Version 00.01.00
+----------------
+Release Date: 2025-02-28
+
+Initial Release:
+- SEO MCP Tool Provider library
+- Provides get-url-seo MCP tool for SEO analysis:
+  * get-url-seo - Retrieves and parses HTML of a URL, extracts SEO-relevant information
+    including meta tags, headings, Open Graph, Twitter Card, structured data, links, and more
+- Integrates with DnnMcp via DNN dependency injection
+- Library-only package (no UI components)
+- Automatically registers tools when DLL is loaded
+
+Requirements:
+- DNN Platform 9.3.0 or higher
+- DnnMcp module installed
+- .NET Framework 4.7.2
+
+Installation:
+- Install via DNN Extensions page
+- Tools will be automatically available through DnnMcp MCP server
+- No configuration required

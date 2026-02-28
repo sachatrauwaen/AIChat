@@ -31,7 +31,7 @@ namespace Satrabel.AIChat.Tools
                 {
                     new ToolParameter
                     {
-                        Name = "filePath",
+                        Name = "path",
                         Description = "The path of the file to write to",
                         Required = true,
                         Type = "string"
@@ -46,8 +46,14 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var filePath = arguments["filePath"].ToString();
-                    var content = arguments["content"].ToString();
+                    if (!arguments.ContainsKey("path"))
+                        throw new ArgumentException("Path is required");
+                    if (!arguments.ContainsKey("content"))
+                        throw new ArgumentException("Content is required");
+
+                    var filePath = arguments["path"]?.ToString();
+                    var content = arguments["content"]?.ToString();
+
                     var result = WriteFile(filePath, content);
 
                     return new CallToolResult
@@ -66,14 +72,13 @@ namespace Satrabel.AIChat.Tools
 
         public string WriteFile(string filePath, string content)
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be empty");
+            if (content == null)
+                throw new ArgumentException("Content cannot be null");
+
             try
             {
-                // Check if the file path is provided
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return "Error: File path cannot be empty";
-                }
-
                 var portalId = PortalSettings.Current.PortalId;
                 var fileManager = FileManager.Instance;
                 var folderManager = FolderManager.Instance;

@@ -45,8 +45,17 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var filePath = arguments["filePath"].ToString();
-                    var content = arguments["content"].ToString();
+                    if (!arguments.ContainsKey("filePath"))
+                        throw new ArgumentException("File path is required");
+                    var filePath = arguments["filePath"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(filePath))
+                        throw new ArgumentException("File path cannot be empty");
+                    if (!arguments.ContainsKey("content"))
+                        throw new ArgumentException("Content is required");
+                    var content = arguments["content"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(content))
+                        throw new ArgumentException("Content cannot be empty");
+
                     var result = WriteSystemFile(filePath, content);
 
                     return new CallToolResult

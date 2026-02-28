@@ -3,6 +3,7 @@ using Dnn.Mcp.WebApi.Services;
 using Dnn.PersonaBar.Library;
 using Dnn.PersonaBar.Library.Attributes;
 using DotNetNuke.Common;
+using DotNetNuke.Common.Utilities;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Entities.Users;
 using DotNetNuke.Instrumentation;
@@ -17,7 +18,6 @@ using Satrabel.AIChat.History;
 using Satrabel.AIChat.Services;
 using Satrabel.PersonaBar.AIChat.Apis.Dto;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -45,12 +45,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         private const string APIKEY_SETTING = "AIChat_ApiKey";
         private const string MODEL_SETTING = "AIChat_Model";
         private const string MAX_TOKENS_SETTING = "AIChat_MAX_TOKENS";
+        private const string HISTORY_MAX_TOKENS_SETTING = "AIChat_HistoryMaxTokens";
+        private const string HISTORY_MAX_TURNS_SETTING = "AIChat_HistoryMaxTurns";
         private const string TOOLS_SETTING = "AIChat_Tools";
         private const string AUTO_READONLY_TOOLS_SETTING = "AIChat_AUTO_READONLY_TOOLS";
         private const string AUTO_WRITE_TOOLS_SETTING = "AIChat_AUTO_WRITE_TOOLS";
         private const int MAX_TOKENS_DEFAULT = 4096;
-        private static readonly ConcurrentDictionary<string, Conversation> _pendingConversations =
-            new ConcurrentDictionary<string, Conversation>();
 
         public AITornadoController(IMcpRegistry mcpRegistry, IServiceProvider dependencyProvider)
         {
@@ -81,9 +81,56 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             return Path.Combine(portalPath, "aichat", "conversations");
         }
 
+        private string GetPendingConversationCacheKey(string conversationId)
+        {
+            return $"AIChat_PendingConversation_{PortalId}_{conversationId}";
+        }
+
+        private Conversation GetPendingConversation(string conversationId)
+        {
+            return DataCache.GetCache(GetPendingConversationCacheKey(conversationId)) as Conversation;
+        }
+
+        private void SavePendingConversation(string conversationId, Conversation conversation)
+        {
+            DataCache.SetCache(GetPendingConversationCacheKey(conversationId), conversation);
+        }
+
+        private void RemovePendingConversation(string conversationId)
+        {
+            DataCache.RemoveCache(GetPendingConversationCacheKey(conversationId));
+        }
+
         private ChatHistoryManager GetHistoryManager()
         {
             return new ChatHistoryManager(GetConversationsFolder());
+        }
+
+        private ChatHistoryPolicy BuildHistoryPolicy()
+        {
+            var policy = ChatHistoryPolicy.CreateDefault();
+
+            var historyTokensValue = PortalController.GetPortalSetting(
+                HISTORY_MAX_TOKENS_SETTING,
+                PortalId,
+                policy.MaxContextTokens.ToString());
+
+            if (int.TryParse(historyTokensValue, out var historyTokens) && historyTokens > 0)
+            {
+                policy.MaxContextTokens = historyTokens;
+            }
+
+            var historyTurnsValue = PortalController.GetPortalSetting(
+                HISTORY_MAX_TURNS_SETTING,
+                PortalId,
+                policy.MaxUserTurns.ToString());
+
+            if (int.TryParse(historyTurnsValue, out var historyTurns) && historyTurns > 0)
+            {
+                policy.MaxUserTurns = historyTurns;
+            }
+
+            return policy;
         }
 
         private string GenerateSystemPrompt(TornadoChatRequest request)
@@ -144,6 +191,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpPost]
         public async Task<TornadoChatResponse> Chat(TornadoChatRequest request)
         {
+            //DataCache.SetCache()
             if (string.IsNullOrEmpty(GetApiKey()))
             {
                 return new TornadoChatResponse
@@ -157,6 +205,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             {
                 var historyManager = GetHistoryManager();
                 ChatConversation chatHistory;
+                ChatHistoryUsage historyUsage;
 
                 if (!string.IsNullOrEmpty(request.ConversationId))
                 {
@@ -167,6 +216,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 {
                     chatHistory = historyManager.CreateConversation();
                 }
+
+                var historyPolicy = BuildHistoryPolicy();
+                var contextMessages = historyManager.GetContextMessages(chatHistory.Id, historyPolicy, out historyUsage);
 
                 TornadoToolsService toolsService = CreateToolService();
                 var enabledToolNames = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "")
@@ -196,10 +248,16 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 if (request.RunTool && !string.IsNullOrEmpty(request.ToolName))
                 {
                     // Tool confirmation/rejection: try to reuse the cached Conversation with proper tool_use state
-                    if (!_pendingConversations.TryRemove(chatHistory.Id, out conv))
+                    var existingConversation = GetPendingConversation(chatHistory.Id);
+                    if (existingConversation != null)
+                    {
+                        RemovePendingConversation(chatHistory.Id);
+                        conv = existingConversation;
+                    }
+                    else
                     {
                         conv = tornadoService.CreateConversation(systemPrompt, tools);
-                        ReplayHistory(conv, chatHistory);
+                        ReplayHistory(conv, contextMessages);
                     }
 
                     var toolCallId = request.ToolCallId ?? request.ToolName;
@@ -230,12 +288,34 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                             Content = "The user refused this action."
                         });
                         chatHistory.AddMessage(MessageRole.User, $"[Tool Result for {request.ToolName}]: The user refused this action.");
+
+                        // Tool refused: return without calling the LLM
+                        historyManager.SaveConversation(chatHistory.Id);
+                        var refusedMessages = chatHistory.Messages.Select(m => new TornadoMessageDto
+                        {
+                            Role = m.Role.ToString().ToLowerInvariant(),
+                            Content = m.Content,
+                            ToolName = m.ToolName,
+                            ToolArguments = m.ToolArguments,
+                            ToolCallId = m.ToolCallId
+                        }).ToList();
+                        return new TornadoChatResponse
+                        {
+                            Success = true,
+                            Message = string.Empty,
+                            ConversationId = chatHistory.Id,
+                            Messages = refusedMessages,
+                            ToolCall = null,
+                            TotalInputTokens = 0,
+                            TotalOutputTokens = 0,
+                            TotalPrice = 0
+                        };
                     }
                 }
                 else
                 {
                     conv = tornadoService.CreateConversation(systemPrompt, tools);
-                    ReplayHistory(conv, chatHistory);
+                    ReplayHistory(conv, contextMessages);
 
                     if (!string.IsNullOrWhiteSpace(request.Message))
                     {
@@ -318,7 +398,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                                 conv.RemoveMessage(lastMsg);
                             }
 
-                            _pendingConversations[chatHistory.Id] = conv;
+                            SavePendingConversation(chatHistory.Id, conv);
 
                             var parsedArgs = ParseToolArguments(capturedCall.Arguments);
                             pendingToolCall = new TornadoToolCallDto
@@ -341,6 +421,15 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 }
 
                 historyManager.SaveConversation(chatHistory.Id);
+
+                if (historyUsage != null)
+                {
+                    Logger.Info(
+                        $"AIChat history usage for conversation {chatHistory.Id}: " +
+                        $"kept {historyUsage.KeptMessages}/{historyUsage.TotalMessages} messages, " +
+                        $"~{historyUsage.KeptApproxTokens}/{historyUsage.TotalApproxTokens} tokens, " +
+                        $"tool messages {historyUsage.KeptToolMessages}/{historyUsage.TotalToolMessages}.");
+                }
 
                 var messages = chatHistory.Messages.Select(m => new TornadoMessageDto
                 {
@@ -381,11 +470,18 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             return toolsService;
         }
 
-        private void ReplayHistory(Conversation conv, ChatConversation chatHistory)
+        private void ReplayHistory(Conversation conv, IEnumerable<Satrabel.AIChat.History.ChatMessage> messages)
         {
-            foreach (var m in chatHistory.Messages)
+            if (messages == null)
+            {
+                return;
+            }
+
+            foreach (var m in messages)
             {
                 if (m.Role == MessageRole.Tool)
+                    continue;
+                if (ChatHistoryHelpers.IsToolResultWrapper(m))
                     continue;
                 if (m.Role == MessageRole.User)
                     conv.AppendUserInput(m.Content);
@@ -472,7 +568,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 };
             }
             File.Delete(filePath);
-            _pendingConversations.TryRemove(request.Id, out _);
+            RemovePendingConversation(request.Id);
             return new TornadoDeleteConversationResult()
             {
                 Success = true,
@@ -494,12 +590,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     res.Models.Add(new ModelDto
                     {
                         Value = model.Name,
-                        Name = $"{model.Name} ({model.Provider.ToString()})" 
+                        Name = $"{model.Provider.ToString()} - {model.Name}" 
                     });
                 }
                
                 res.ApiKey = string.IsNullOrEmpty(apiKey) ? "" : "********";
                 res.MaxTokens = int.Parse(PortalController.GetPortalSetting(MAX_TOKENS_SETTING, PortalId, MAX_TOKENS_DEFAULT.ToString()));
+                res.HistoryMaxTokens = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TOKENS_SETTING, PortalId, "4096"));
+                res.HistoryMaxTurns = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TURNS_SETTING, PortalId, "20"));
                 res.Model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, ChatModel.Anthropic.Claude4.Sonnet250514);
                 res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
                 res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
@@ -567,6 +665,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
             }
             PortalController.UpdatePortalSetting(PortalId, MAX_TOKENS_SETTING, request.MaxTokens.ToString());
+            PortalController.UpdatePortalSetting(PortalId, HISTORY_MAX_TOKENS_SETTING, request.HistoryMaxTokens.ToString());
+            PortalController.UpdatePortalSetting(PortalId, HISTORY_MAX_TURNS_SETTING, request.HistoryMaxTurns.ToString());
             var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
             File.WriteAllText(Path.Combine(rulesPath, "global.md"), request.GlobalRules);
             if (!Directory.Exists(rulesPath))

@@ -1,6 +1,6 @@
 <dotnetnuke type="Package" version="5.0">
   <packages>
-    <package name="AIChat" type="PersonaBar" version="00.01.00">
+    <package name="AIChat" type="PersonaBar" version="01.00.00">
       <friendlyName>AI Chat</friendlyName>
       <description>PersonaBar extension for AI-powered Assistant using Anthropic Claude and Vue.js frontend.</description>
       <iconFile>~/DesktopModules/Admin/AIChat/icon_aichat.png</iconFile>
@@ -44,13 +44,12 @@
               <name>Satrabel.AIChat.dll</name>
               <path>bin</path>
             </assembly>
-			<assembly>
-				<name>Satrabel.AnthropicClient.dll</name>
-				<path>bin</path>
-			</assembly>
+            <assembly>
+              <name>LlmTornado.dll</name>
+              <path>bin</path>
+            </assembly>
           </assemblies>
         </component>
-       
       </components>
     </package>
   </packages>

@@ -40,9 +40,6 @@
     <Reference Include="AdvancedStringBuilder, Version=0.1.0.0, Culture=neutral, PublicKeyToken=e818a2fc08933ddb, processorArchitecture=MSIL">
       <HintPath>...\DNN910\packages\AdvancedStringBuilder.0.1.0\lib\net45\AdvancedStringBuilder.dll</HintPath>
     </Reference>
-    <Reference Include="AngleSharp, Version=1.4.0.0, Culture=neutral, PublicKeyToken=e83494dcdc6d31ea, processorArchitecture=MSIL">
-      <HintPath>..\packages\AngleSharp.1.4.0\lib\net472\AngleSharp.dll</HintPath>
-    </Reference>
     <Reference Include="Dnn.PersonaBar.Extensions, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\DNN910\bin\Dnn.PersonaBar.Extensions.dll</HintPath>
@@ -61,6 +58,9 @@
     </Reference>
     <Reference Include="DotNetNuke.log4net, Version=3.0.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DotNetNuke.Instrumentation.9.10.2\lib\net45\DotNetNuke.log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetNuke.Modules.Html">
+      <HintPath>..\refs\dnn910\DotNetNuke.Modules.Html.dll</HintPath>
     </Reference>
     <Reference Include="DotNetNuke.Web, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DotNetNuke.Web.9.10.2\lib\net45\DotNetNuke.Web.dll</HintPath>
@@ -126,7 +126,9 @@
     <Reference Include="System.Text.Json, Version=8.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Text.Json.8.0.6\lib\net462\System.Text.Json.dll</HintPath>
     </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
@@ -157,37 +159,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Apis\Dto\ChatRequest.cs" />
-    <Compile Include="Apis\Dto\ChatResponse.cs" />
-    <Compile Include="Apis\Dto\ChatToolRequest.cs" />
-    <Compile Include="Apis\Dto\ContentDto.cs" />
     <Compile Include="Apis\Dto\RuleDto.cs" />
     <Compile Include="Apis\Dto\TornadoDeleteConversationRequest.cs" />
-    <Compile Include="Apis\Extensions.cs" />
     <Compile Include="Apis\Dto\SettingsDto.cs" />
     <Compile Include="Apis\Dto\MarkdownPreferences.cs" />
-    <Compile Include="Apis\Dto\ToolResponse.cs" />
     <Compile Include="Apis\Dto\InfoDto.cs" />
     <Compile Include="Apis\Dto\ModelDto.cs" />
     <Compile Include="Apis\Dto\ToolDto.cs" />
     <Compile Include="Apis\TornadoDeleteConversationResult.cs" />
     <Compile Include="History\ChatConversation.cs" />
+    <Compile Include="History\ChatHistoryHelpers.cs" />
     <Compile Include="History\ChatHistoryManager.cs" />
+    <Compile Include="History\ChatHistoryPolicy.cs" />
+    <Compile Include="History\ChatHistoryTrimmer.cs" />
+    <Compile Include="History\ChatHistoryUsage.cs" />
     <Compile Include="History\ChatMessage.cs" />
     <Compile Include="History\ConversationStats.cs" />
     <Compile Include="History\ExportFormat.cs" />
     <Compile Include="History\MessageRole.cs" />
     <Compile Include="History\Program.cs" />
-    <Compile Include="ContextWindow\ContextAwareChatMessage.cs" />
-    <Compile Include="ContextWindow\ContextWindowConfig.cs" />
-    <Compile Include="ContextWindow\ContextWindowExample.cs" />
-    <Compile Include="ContextWindow\ContextWindowManager.cs" />
-    <Compile Include="ContextWindow\ContextWindowStats.cs" />
-    <Compile Include="ContextWindow\MessagePriority.cs" />
-    <Compile Include="ContextWindow\MessageSummarizer.cs" />
-    <Compile Include="ContextWindow\TokenEstimationMethod.cs" />
-    <Compile Include="ContextWindow\TokenEstimator.cs" />
-    <Compile Include="ContextWindow\TrimmingStrategy.cs" />
+    <Compile Include="Mcp\Apis\ApiKeyAuthorizeAttribute.cs" />
     <Compile Include="Mcp\Apis\DnnMcpController.cs" />
     <Compile Include="Mcp\Apis\Dto\InfoDto.cs" />
     <Compile Include="Mcp\Apis\Dto\RuleDto.cs" />
@@ -215,13 +206,10 @@
     <Compile Include="Models\TextContentBlock.cs" />
     <Compile Include="Models\ToolDefinition.cs" />
     <Compile Include="Models\ToolParameter.cs" />
-    <Compile Include="Services\AnthropicService.cs" />
     <Compile Include="Services\IMcpProvider.cs" />
     <Compile Include="Services\ModuleInitializer.cs" />
-    <Compile Include="Services\MyAutoToolChoice.cs" />
     <Compile Include="Services\TornadoChatService.cs" />
     <Compile Include="Services\TornadoToolsService.cs" />
-    <Compile Include="Apis\Dto\MessageDto.cs" />
     <Compile Include="Apis\Dto\TornadoChatRequest.cs" />
     <Compile Include="Apis\Dto\TornadoChatResponse.cs" />
     <Compile Include="Apis\Dto\TornadoMessageDto.cs" />
@@ -234,6 +222,7 @@
     <Compile Include="Tools\DeletePage.cs" />
     <Compile Include="Tools\GetFiles.cs" />
     <Compile Include="Tools\GetFolders.cs" />
+    <Compile Include="Tools\GetHtmlModule.cs" />
     <Compile Include="Tools\GetPage.cs" />
     <Compile Include="Tools\GetSystemFiles.cs" />
     <Compile Include="Tools\ReadFile.cs" />
@@ -241,9 +230,9 @@
     <Compile Include="Tools\GetModules.cs" />
     <Compile Include="Tools\GetPages.cs" />
     <Compile Include="Tools\GetUrlHtml.cs" />
-    <Compile Include="Tools\GetUrlSeo.cs" />
     <Compile Include="Tools\SendEmail.cs" />
     <Compile Include="Tools\ToolsExtensions.cs" />
+    <Compile Include="Tools\UpdateHtmlModule.cs" />
     <Compile Include="Tools\UpdatePage.cs" />
     <Compile Include="Tools\WriteFile.cs" />
     <Compile Include="Tools\WriteSystemFile.cs" />
@@ -263,24 +252,24 @@
     </None>
     <None Include="BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.psm1" />
     <None Include="BuildScripts\Solution\packages\repositories.config" />
-    <None Include="ClientSide\package-lock.json" />
-    <None Include="ClientSide\package.json" />
-    <None Include="ClientSide\src\components\AIChat.vue" />
+    <None Include="ClientSideVite\package-lock.json" />
+    <None Include="ClientSideVite\package.json" />
+    <None Include="ClientSideVite\src\App.vue" />
+    <None Include="ClientSideVite\src\components\AISettings.vue" />
+    <None Include="ClientSideVite\src\components\ChatView.vue" />
+    <None Include="ClientSideVite\src\components\MCPSettings.vue" />
     <None Include="AIChat.dnn" />
-    <None Include="ClientSide\src\components\AIChat2.vue" />
-    <None Include="ClientSide\src\components\AISettings.vue" />
     <None Include="packages.config" />
-    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="AIChat.html" />
     <Content Include="BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll" />
     <Content Include="BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.xml" />
-    <Content Include="ClientSide\babel.config.js" />
-    <Content Include="ClientSide\index.html" />
-    <Content Include="ClientSide\src\aiChatService.js" />
-    <Content Include="ClientSide\src\main.js" />
-    <Content Include="ClientSide\vue.config.js" />
+    <Content Include="ClientSideVite\index.html" />
+    <Content Include="ClientSideVite\src\api\aiTornadoService.js" />
+    <Content Include="ClientSideVite\src\api\dnnMcpService.js" />
+    <Content Include="ClientSideVite\src\main.js" />
+    <Content Include="ClientSideVite\vite.config.js" />
     <Content Include="css\AIChat.css" />
     <Content Include="License.txt" />
     <Content Include="ReleaseNotes.txt" />
@@ -292,12 +281,8 @@
     <EmbeddedResource Include="App_LocalResources\AIChat.resx" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\anthropic-client\src\AnthropicClient\AnthropicClient.csproj">
-      <Project>{94903686-4fa8-ff4f-38ba-ea5995c153d7}</Project>
-      <Name>AnthropicClient</Name>
-    </ProjectReference>
+    <Folder Include="ClientSide\" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <Extension>zip</Extension>

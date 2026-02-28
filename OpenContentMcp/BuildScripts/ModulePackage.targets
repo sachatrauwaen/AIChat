@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="windows-1252"?>
+
+<!-- WARNING, WARNING, WARNING -->
+<!-- REMEMBER THAT IF YOU MODIFY THE TARGETS FILE YOU NEED TO CLOSE/OPEN THE PROJECT FOR THE CHANGES TO TAKE EFFECT -->
+
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<Import Project="MSBuild.Community.Tasks.Targets" />
+
+	<PropertyGroup>
+		<AssemblyInfoFile>$(MSBuildProjectDirectory)\Properties\AssemblyInfo.cs</AssemblyInfoFile>
+		<!--
+		<AppVeyorFile>$(MSBuildProjectDirectory)\..\appveyor.yml</AppVeyorFile>
+		-->
+	</PropertyGroup>
+
+	<Target Name="BeforeBuild">
+		<CallTarget Targets="SetVersionInfo" />
+	</Target>
+
+	<!-- Set the version numbers in AssemblyInfo -->
+	<Target Name="SetVersionInfo">
+		<XmlRead Prefix="n"
+			   Namespace="http://schemas.microsoft.com/developer/msbuild/2003"
+			   XPath="dotnetnuke/packages/package[1]/@version"
+			   XmlFileName="$(DNNFileName).dnn">
+			<Output TaskParameter="Value" PropertyName="Version" />
+		</XmlRead>
+		<!-- Write new version to assemblyinfo.cs -->
+		<FileUpdate Files="$(AssemblyInfoFile)" Encoding="ASCII" Regex="AssemblyVersion\(&quot;.*&quot;\)" ReplacementText="AssemblyVersion(&quot;$(Version).00&quot;)" />
+		<FileUpdate Files="$(AssemblyInfoFile)" Encoding="ASCII" Regex="AssemblyFileVersion\(&quot;.*&quot;\)" ReplacementText="AssemblyFileVersion(&quot;$(Version).00&quot;)" />
+		<!--
+		<FileUpdate Files="$(AppVeyorFile)" Encoding="ASCII" Regex="version: (.*)\.{build}-{branch}" ReplacementText="version: $(Version).{build}-{branch}" />
+		-->
+	</Target>
+
+	<Target Name="PackageModule" Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<XmlRead Prefix="n"
+						Namespace="http://schemas.microsoft.com/developer/msbuild/2003"
+						XPath="dotnetnuke/packages/package[1]/@version"
+						XmlFileName="$(DNNFileName).dnn">
+			<Output TaskParameter="Value" PropertyName="Version" />
+		</XmlRead>
+
+		<ItemGroup>
+			<InstallInclude Include="**\*.md" Exclude="packages\**;BuildScripts\**" />
+		</ItemGroup>
+
+		<ItemGroup>
+			<SourceInclude Include="**\*.md" Exclude="packages\**;BuildScripts\**" />
+			<SourceInclude Include="**\*.asmx" />
+			<SourceInclude Include="**\*.css" />
+			<SourceInclude Include="**\*.xsl" />
+			<SourceInclude Include="**\*.html" />
+			<SourceInclude Include="**\*.htm" />
+			<SourceInclude Include="**\*.resx" />
+			<SourceInclude Include="**\*.xml" Exclude="**\obj\**;**\_ReSharper*\**;**\.git\**;" />
+			<SourceInclude Include="**\*.aspx" />
+			<SourceInclude Include="**\*.js" />
+			<SourceInclude Include="**\*.json" />
+			<SourceInclude Include="**\*.txt" Exclude="**\obj\**;**\_ReSharper*\**;**\.git\**;" />
+			<SourceInclude Include="**\images\**" />
+			<SourceInclude Include="**\*.cs" />
+			<SourceInclude Include="**\Packages\**" />
+			<SourceInclude Include="**\*.cs.designer" />
+			<SourceInclude Include="**\*.csproj" />
+			<SourceInclude Include="**\*.targets" />
+			<SourceInclude Include="**\*.sln" />
+		</ItemGroup>
+
+
+		<CreateItem Include="$(DNNFileName).dnn">
+			<Output TaskParameter="Include" ItemName="PackageManifestFiles" />
+		</CreateItem>
+
+		<CreateItem Include="**\License.txt">
+			<Output TaskParameter="Include" ItemName="PackageTxtFiles" />
+		</CreateItem>
+
+		<CreateItem Include="**\ReleaseNotes.txt">
+			<Output TaskParameter="Include" ItemName="PackageTxtFiles" />
+		</CreateItem>
+	
+
+		<Copy SourceFiles="bin\Release\$(AssemblyName).dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
+		<Copy SourceFiles="@(PackageManifestFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
+		<Copy SourceFiles="@(PackageTxtFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
+
+
+		<!-- create the INSTALL RESOURCES.ZIP file -->
+		<Copy SourceFiles="@(InstallInclude)" DestinationFolder="$(MSBuildProjectDirectory)\ResourcesZip\%(RecursiveDir)" />
+
+		<CreateItem Include="$(MSBuildProjectDirectory)\ResourcesZip\**\*.*">
+			<Output TaskParameter="Include" ItemName="ResourcesContent" />
+		</CreateItem>
+
+		<Zip Files="@(ResourcesContent)" WorkingDirectory="$(MSBuildProjectDirectory)\ResourcesZip" ZipFileName="Resources.$(Extension)" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\Resources.$(Extension)" DestinationFolder="package/" />
+
+		<CreateItem Include="$(MSBuildProjectDirectory)\Package\**\*.*">
+			<Output TaskParameter="Include" ItemName="OutputContent" />
+		</CreateItem>
+		<!-- Create the Install package -->
+		<Zip Files="@(OutputContent)" WorkingDirectory="$(MSBuildProjectDirectory)\Package" ZipFileName="$(PackageName)_$(Version)_Install.$(Extension)" />
+		<!-- Copy the Install package to the Packages folder -->
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Install.$(Extension)" DestinationFolder="$(WebsitePath)/Install/Module" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Install.$(Extension)" DestinationFolder="../Install" />
+
+		<Copy SourceFiles="bin\Release\$(AssemblyName).dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
+		
+		<Copy SourceFiles="@(PackageManifestFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
+		<Copy SourceFiles="@(PackageTxtFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
+
+		<!-- create the SOURCE RESOURCES.ZIP file -->
+		<Copy SourceFiles="@(SourceInclude)" DestinationFolder="$(MSBuildProjectDirectory)\ResourcesZip\%(RecursiveDir)" />
+
+		<CreateItem Include="$(MSBuildProjectDirectory)\ResourcesZip\**\*.*">
+			<Output TaskParameter="Include" ItemName="SourceContent" />
+		</CreateItem>
+
+		<Zip Files="@(SourceContent)" WorkingDirectory="$(MSBuildProjectDirectory)\ResourcesZip" ZipFileName="Resources.$(Extension)" />
+		
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\Resources.$(Extension)" DestinationFolder="package/" />
+
+		<CreateItem Include="$(MSBuildProjectDirectory)\Package\**\*.*">
+			<Output TaskParameter="Include" ItemName="OutputSource" />
+		</CreateItem>
+
+		<Zip Files="@(OutputSource)" WorkingDirectory="$(MSBuildProjectDirectory)\Package" ZipFileName="$(PackageName)_$(Version)_Source.$(Extension)" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Source.$(Extension)" DestinationFolder="$(WebsitePath)/Install/Module" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Source.$(Extension)" DestinationFolder="../Install" />
+
+		<Delete Files="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Install.$(Extension)" />
+		<Delete Files="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Source.$(Extension)" />
+
+		<Delete Files="$(MSBuildProjectDirectory)\Resources.Zip" />
+
+		<RemoveDir Directories ="$(MSBuildProjectDirectory)\Package" ContinueOnError="True"/>
+		<RemoveDir Directories ="$(MSBuildProjectDirectory)\Package" />
+		<RemoveDir Directories ="$(MSBuildProjectDirectory)\ResourcesZip" ContinueOnError="True"/>
+		<RemoveDir Directories ="$(MSBuildProjectDirectory)\ResourcesZip" />
+
+	</Target>
+</Project>

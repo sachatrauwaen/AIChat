@@ -24,6 +24,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-html",
                 Title = "Get HTML Module Content",
                 Description = "Get the HTML content from a DNN HTML module",
+                ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {
                      new ToolParameter
@@ -43,8 +44,12 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var moduleId = Convert.ToInt32(arguments["moduleId"]);
-                    int tabId = Convert.ToInt32(arguments["tabId"]);
+                    if (!arguments.ContainsKey("moduleId"))
+                        throw new ArgumentException("Module ID is required");
+                    var moduleId = Convert.ToInt32(arguments["moduleId"]?.ToString());
+                    if (!arguments.ContainsKey("tabId"))
+                        throw new ArgumentException("Tab ID is required");
+                    var tabId = Convert.ToInt32(arguments["tabId"]?.ToString());
 
                     var result = GetHtml(moduleId, tabId);
 
@@ -75,7 +80,7 @@ namespace Satrabel.AIChat.Tools
                     return JsonConvert.SerializeObject(new { error = "Module not found." });
                 }
 
-                if (!string.Equals(module.DesktopModule?.ModuleName, "HTML", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(module.DesktopModule?.ModuleName, "DNN_HTML", StringComparison.OrdinalIgnoreCase))
                 {
                     return JsonConvert.SerializeObject(new { error = "Module is not an HTML module. Only HTML modules are supported." });
                 }

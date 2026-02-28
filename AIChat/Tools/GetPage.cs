@@ -34,7 +34,9 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var pageId = Convert.ToInt32(arguments["pageId"]);
+                    if (!arguments.ContainsKey("pageId"))
+                        throw new ArgumentException("Page ID is required");
+                    var pageId = Convert.ToInt32(arguments["pageId"]?.ToString());
                     var result = GetPage(pageId);
 
                     return new CallToolResult

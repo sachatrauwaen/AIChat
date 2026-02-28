@@ -33,6 +33,28 @@
             v-model="maxTokens"
           />
         </div>
+        <div class="ai-settings__field ai-settings__field--inline">
+          <label for="historyMaxTokens" class="ai-settings__label">
+            Max tokens for conversation history context
+          </label>
+          <input
+            id="historyMaxTokens"
+            type="number"
+            class="ai-settings__input ai-settings__input--short"
+            v-model="historyMaxTokens"
+          />
+        </div>
+        <div class="ai-settings__field ai-settings__field--inline">
+          <label for="historyMaxTurns" class="ai-settings__label">
+            Max recent user turns to keep in context
+          </label>
+          <input
+            id="historyMaxTurns"
+            type="number"
+            class="ai-settings__input ai-settings__input--short"
+            v-model="historyMaxTurns"
+          />
+        </div>
         <div class="ai-settings__field">
           <label for="model" class="ai-settings__label">Model</label>
           <select
@@ -201,7 +223,9 @@ export default {
            tools: [],
            autoReadonlyTools: false,
            autoWriteTools: false,
-           maxTokens: 0
+           maxTokens: 0,
+           historyMaxTokens: 0,
+           historyMaxTurns: 0
         };
     },
     methods: {
@@ -222,6 +246,8 @@ export default {
                 this.globalRules= data.globalRules || '';
                 this.tools = data.tools || [];
                 this.maxTokens = data.maxTokens || 1024;
+                this.historyMaxTokens = data.historyMaxTokens || 4096;
+                this.historyMaxTurns = data.historyMaxTurns || 20;
                 this.autoReadonlyTools = data.autoReadonlyTools || false;
                 this.autoWriteTools = data.autoWriteTools || false;
                 this.isThinking = false;
@@ -240,6 +266,8 @@ export default {
                   globalRules: this.globalRules,
                   tools: this.tools,
                   maxTokens: this.maxTokens,
+                  historyMaxTokens: this.historyMaxTokens,
+                  historyMaxTurns: this.historyMaxTurns,
                   autoReadonlyTools: this.autoReadonlyTools,
                   autoWriteTools: this.autoWriteTools
               });

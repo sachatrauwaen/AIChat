@@ -53,9 +53,17 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var moduleId = Convert.ToInt32(arguments["moduleId"]);
-                    var content = arguments["content"]?.ToString() ?? string.Empty;
-                    int tabId = Convert.ToInt32(arguments["tabId"]);
+                    if (!arguments.ContainsKey("moduleId"))
+                        throw new ArgumentException("Module ID is required");
+                    var moduleId = Convert.ToInt32(arguments["moduleId"]?.ToString());
+                    if (!arguments.ContainsKey("content"))
+                        throw new ArgumentException("Content is required");
+                    var content = arguments["content"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(content))
+                        throw new ArgumentException("Content cannot be empty");
+                    if (!arguments.ContainsKey("tabId"))
+                        throw new ArgumentException("Tab ID is required");
+                    var tabId = Convert.ToInt32(arguments["tabId"]?.ToString());
 
                     var result = UpdateHtml(moduleId, content, tabId);
 
@@ -86,20 +94,24 @@ namespace Satrabel.AIChat.Tools
                     return JsonConvert.SerializeObject(new { error = "Module not found." });
                 }
 
-                if (!string.Equals(module.DesktopModule?.ModuleName, "HTML", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(module.DesktopModule?.ModuleName, "DNN_HTML", StringComparison.OrdinalIgnoreCase))
                 {
                     return JsonConvert.SerializeObject(new { error = "Module is not an HTML module. Only HTML modules are supported." });
                 }
 
-               
+                var workflowManager = WorkflowManager.Instance;
                 var htmlTextController = new DotNetNuke.Modules.Html.HtmlTextController();
                 var workflowID = htmlTextController.GetWorkflow(moduleId, tabId, PortalSettings.Current.PortalId).Value;
                 var htmlInfo = htmlTextController.GetTopHtmlText(moduleId, false, workflowID);
                 if (htmlInfo == null)
                 {
-                    return JsonConvert.SerializeObject(new { error = "HTML content not found." });
+                    htmlInfo = new HtmlTextInfo();
+                    htmlInfo.ItemID = -1;
+                    htmlInfo.StateID = workflowManager.GetWorkflow(workflowID).FirstState.StateID;
+                    htmlInfo.WorkflowID = workflowID;
+                    htmlInfo.ModuleID = moduleId;
                 }
-                var workflowManager = WorkflowManager.Instance;
+                
                 var workflow = workflowManager.GetWorkflow(workflowID);
                 var workflowStates = workflow.States.ToList();
                 var maxVersions = htmlTextController.GetMaximumVersionHistory(PortalSettings.Current.PortalId);

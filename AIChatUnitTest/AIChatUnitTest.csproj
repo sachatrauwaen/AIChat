@@ -79,7 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AIChat\AIChat.csproj">
-      <Project>{5efd91d5-7b04-40c1-bc4c-6da5f5a65e4b}</Project>
+      <Project>{61D86040-B778-457C-5D1F-DB796D34C65C}</Project>
       <Name>AIChat</Name>
     </ProjectReference>
   </ItemGroup>

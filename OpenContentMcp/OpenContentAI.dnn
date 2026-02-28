@@ -1,0 +1,41 @@
+<dotnetnuke type="Package" version="5.0">
+  <packages>
+    <package name="OpenContentAI" type="Library" version="00.01.00">
+      <friendlyName>OpenContent Tool Provider</friendlyName>
+      <description>OpenContent Tool Provider Library - Provides OpenContent template management tools for AI.</description>
+      <iconFile></iconFile>
+      <owner>
+        <name>Satrabel.be</name>
+        <organization>Satrabel.be</organization>
+        <url>http://www.satrabel.be</url>
+        <email>info@satrabel.be</email>
+      </owner>
+      <license src="License.txt"></license>
+      <releaseNotes src="ReleaseNotes.txt"></releaseNotes>
+      <azureCompatible>true</azureCompatible>
+      <dependencies>
+        <dependency type="CoreVersion">09.03.00</dependency>
+        <dependency type="ManagedPackage" version="00.01.00">Satrabel.AIChat</dependency>
+        <dependency type="ManagedPackage" version="00.01.00">OpenContent</dependency>
+      </dependencies>
+      <components>
+        <component type="ResourceFile">
+          <resourceFiles>
+            <basePath>DesktopModules/OpenContentAIChat</basePath>
+            <resourceFile>
+              <name>Resources.zip</name>
+            </resourceFile>
+          </resourceFiles>
+        </component>
+        <component type="Assembly">
+          <assemblies>
+            <assembly>
+              <name>Satrabel.OpenContentAI.dll</name>
+              <path>bin</path>
+            </assembly>
+          </assemblies>
+        </component>
+      </components>
+    </package>
+  </packages>
+</dotnetnuke>

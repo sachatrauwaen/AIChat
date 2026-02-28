@@ -31,7 +31,7 @@ namespace Satrabel.AIChat.Tools
                 {
                     new ToolParameter
                     {
-                        Name = "filePath",
+                        Name = "path",
                         Description = "The path of the system file to read",
                         Required = true,
                         Type = "string"
@@ -39,8 +39,10 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var filePath = arguments["filePath"].ToString();
-                    var result = ReadSystemFile(filePath);
+                    if (!arguments.ContainsKey("path"))
+                        throw new ArgumentException("Path is required");
+                    var path = arguments["path"]?.ToString();
+                    var result = ReadSystemFile(path);
 
                     return new CallToolResult
                     {
@@ -56,32 +58,28 @@ namespace Satrabel.AIChat.Tools
             });
         }
 
-        public string ReadSystemFile(string filePath)
+        public string ReadSystemFile(string path)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(path))
+                    throw new ArgumentException("Path cannot be empty");
                 // Check if the file path is provided
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return "Error: File path cannot be empty";
-                }
-                if (Path.GetDirectoryName(filePath).Contains("."))
-                {
-                    return "Error: File path cannot contain dots";
-                }
+                if (Path.GetDirectoryName(path).Contains("."))
+                    throw new ArgumentException("Path cannot contain dots");
 
                 var portalRoot = PortalSettings.Current.HomeSystemDirectory;
 
-                filePath = HttpContext.Current.Server.MapPath("~/" + portalRoot + filePath.TrimStart('/'));
+                path = HttpContext.Current.Server.MapPath("~/" + portalRoot + path.TrimStart('/'));
 
                 // Check if file exists
-                if (!File.Exists(filePath))
+                if (!File.Exists(path))
                 {
-                    return $"Error: File '{filePath}' not found";
+                    return $"Error: File '{path}' not found";
                 }
 
                 // Determine file size
-                var fileInfo = new FileInfo(filePath);
+                var fileInfo = new FileInfo(path);
                 var fileSizeInMB = fileInfo.Length / (1024.0 * 1024.0);
 
                 // Prevent reading extremely large files
@@ -91,19 +89,19 @@ namespace Satrabel.AIChat.Tools
                 }
 
                 // Detect if the file is binary
-                bool isBinary = IsBinaryFile(filePath);
+                bool isBinary = IsBinaryFile(path);
                 if (isBinary)
                 {
-                    return $"Error: Cannot read binary file '{Path.GetFileName(filePath)}'";
+                    return $"Error: Cannot read binary file '{Path.GetFileName(path)}'";
                 }
 
                 // Read the file content
-                return File.ReadAllText(filePath);
+                return File.ReadAllText(path);
                 
                 // Return file info and content
                 //var result = new
                 //{
-                //    FileName = Path.GetFileName(filePath),
+                //    FileName = Path.GetFileName(path),
                 //    FilePath = filePath,
                 //    Size = Math.Round(fileInfo.Length / 1024.0, 2), // Size in KB
                 //    LastModified = fileInfo.LastWriteTime,

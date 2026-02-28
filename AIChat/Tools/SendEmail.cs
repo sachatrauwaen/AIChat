@@ -54,9 +54,21 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var toEmail = arguments["toEmail"].ToString();
-                    var subject = arguments["subject"].ToString();
-                    var body = arguments["body"].ToString();
+                    if (!arguments.ContainsKey("toEmail"))
+                        throw new ArgumentException("To Email is required");
+                    var toEmail = arguments["toEmail"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(toEmail))
+                        throw new ArgumentException("To Email cannot be empty");
+                    if (!arguments.ContainsKey("subject"))
+                        throw new ArgumentException("Subject is required");
+                    var subject = arguments["subject"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(subject))
+                        throw new ArgumentException("Subject cannot be empty");
+                    if (!arguments.ContainsKey("body"))
+                        throw new ArgumentException("Body is required");
+                    var body = arguments["body"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(body))
+                        throw new ArgumentException("Body cannot be empty");
                     var isHtml = arguments.ContainsKey("isHtml") ? Convert.ToBoolean(arguments["isHtml"]) : false;
                     
                     var result = SendEmail(toEmail, subject, body, isHtml);

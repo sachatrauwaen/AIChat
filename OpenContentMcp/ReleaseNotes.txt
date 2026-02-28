@@ -1,0 +1,28 @@
+OpenContent MCP Tool Provider - Release Notes
+==============================================
+
+Version 00.01.00
+----------------
+Release Date: 2025-02-12
+
+Initial Release:
+- OpenContent template management tool provider library
+- Provides 5 MCP tools for OpenContent template operations:
+  * list-opencontent-templates - List all available templates
+  * get-opencontent-template - Get template details
+  * create-opencontent-template - Create new templates
+  * update-opencontent-template - Update existing templates
+  * delete-opencontent-template - Delete templates
+- Integrates with DnnMcp via DNN dependency injection
+- Library-only package (no UI components)
+- Automatically registers tools when DLL is loaded
+
+Requirements:
+- DNN Platform 9.3.0 or higher
+- DnnMcp module installed
+- .NET Framework 4.7.2
+
+Installation:
+- Install via DNN Extensions page
+- Tools will be automatically available through DnnMcp MCP server
+- No configuration required

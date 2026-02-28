@@ -35,7 +35,11 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var url = arguments["url"].ToString();
+                    if (!arguments.ContainsKey("url"))
+                        throw new ArgumentException("URL is required");
+                    var url = arguments["url"]?.ToString();
+                    if (string.IsNullOrWhiteSpace(url))
+                        throw new ArgumentException("URL cannot be empty");
                     var result = ExtractSeoInfo(url);
 
                     return new CallToolResult

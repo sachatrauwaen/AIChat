@@ -24,7 +24,7 @@ namespace Satrabel.AIChat.Tools
                 {
                     new ToolParameter
                     {
-                        Name = "filePath",
+                        Name = "path",
                         Description = "The path of the file to read",
                         Required = true,
                         Type = "string"
@@ -32,8 +32,10 @@ namespace Satrabel.AIChat.Tools
                 },
                 Handler = (arguments) =>
                 {
-                    var filePath = arguments["filePath"].ToString();
-                    var result = ReadFile(filePath);
+                    if (!arguments.ContainsKey("path"))
+                        throw new ArgumentException("Path is required");
+                    var path = arguments["path"]?.ToString();
+                    var result = ReadFile(path);
 
                     return new CallToolResult
                     {
@@ -49,12 +51,15 @@ namespace Satrabel.AIChat.Tools
             });
         }
 
-        public string ReadFile(string filePath)
+        public string ReadFile(string path)
         {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("File path cannot be empty");
+
             try
             {
                 // Check if the file path is a DNN relative path or absolute path
-                if (string.IsNullOrEmpty(filePath))
+                if (string.IsNullOrEmpty(path))
                 {
                     return "Error: File path cannot be empty";
                 }
@@ -64,11 +69,11 @@ namespace Satrabel.AIChat.Tools
                 var portalId = PortalSettings.Current.PortalId;
 
                 // Extract folder path and file name
-                string folderPath = Path.GetDirectoryName(filePath).Replace("\\", "/");
+                string folderPath = Path.GetDirectoryName(path).Replace("\\", "/");
 
                 folderPath = folderPath.Trim('/');
 
-                string fileName = Path.GetFileName(filePath);
+                string fileName = Path.GetFileName(path);
 
                 // Check if folder exists
                 IFolderInfo folder = folderManager.GetFolder(portalId, folderPath);

@@ -39,12 +39,12 @@ namespace Satrabel.AIChat.Services
         {
             _mcpRegistry = mcpRegistry;
             _dependencyProvider = dependencyProvider;
-            _readOnlyTools = BuildReadOnlyTools();
-            _writeTools = BuildWriteTools();
+            _readOnlyTools = BuildTools(true);
+            _writeTools = BuildTools(false);
             _allTools = new List<Tool>();
             _allTools.AddRange(_readOnlyTools);
             _allTools.AddRange(_writeTools);
-            _readOnlyNames = new HashSet<string>(_readOnlyTools.Select(t => t.Function?.Name));
+            _readOnlyNames = new HashSet<string>(_readOnlyTools.Select(t => t.ResolvedName));
         }
 
         public List<Tool> GetReadOnlyTools() => _readOnlyTools;
@@ -76,47 +76,41 @@ namespace Satrabel.AIChat.Services
 
         #region Tool definitions
 
-        private List<Tool> BuildReadOnlyTools()
+        private List<Tool> BuildTools(bool readOnly)
         {
-            return _mcpRegistry.GetAllTools().Where(t => t.ReadOnly == true).Select(t =>
-                new Tool(new ToolFunction(
-                    t.Name,
-                    t.Description,
-                    ConvertParametersToJsonSchema(t.Parameters)
-                ), true)
-             ).ToList();
-        }
-
-        [Description("Description")]
-        //[ToolName("ToolName")] //optional attribute to override tool name
-        string MyTool([Description("Description")] string param1, [Description("Description")] string param2)
-        {
-            // Tool implementation
-            return $"Result: {param1} - {param2}";
-        }
-
-        private List<Tool> BuildWriteTools()
-        {
+            return _mcpRegistry.GetAllTools().Where(t => t.ReadOnly == readOnly).Select(t =>
+               new Tool(t.Parameters.Select(p => new ToolParam(
+                   p.Name, 
+                   p.Description, 
+                   TornadoMapParameterType(p.Type), 
+                   p.Required)).ToList(), t.Name, t.Description)
+            ).ToList();
             /*
-            return new List<Tool>
-            {
-                new Tool(new List<ToolParam>
-                {
-                    new ToolParam("filePath", "The path of the file to write to", ToolParamAtomicTypes.String, true),
-                    new ToolParam("content", "The content file to write to", ToolParamAtomicTypes.String, true),
-
-                }, "write-file"), 
-               
-            };
-            */
-
             return _mcpRegistry.GetAllTools().Where(t => t.ReadOnly == false).Select(t =>
                 new Tool(new ToolFunction(
                     t.Name,
                     t.Description,
                     ConvertParametersToJsonSchema(t.Parameters)
-                ), true)
+                ))
              ).ToList();
+            */
+        }
+
+        private ToolParamAtomicTypes TornadoMapParameterType(string type)
+        {
+            switch (type)
+            {
+                case "string":
+                    return ToolParamAtomicTypes.String;
+                case "int":
+                    return ToolParamAtomicTypes.Int;
+                case "float":
+                    return ToolParamAtomicTypes.Float;
+                case "bool":
+                    return ToolParamAtomicTypes.Bool;
+                default:
+                    return ToolParamAtomicTypes.String;
+            }
         }
 
         #endregion
@@ -147,7 +141,7 @@ namespace Satrabel.AIChat.Services
             {
                 ["type"] = "object",
                 ["properties"] = new JObject(),
-                ["additionalProperties"] = false
+                //["additionalProperties"] = false
             };
 
             var properties = (JObject)schema["properties"]!;

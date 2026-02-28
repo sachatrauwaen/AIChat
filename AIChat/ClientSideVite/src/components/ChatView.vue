@@ -112,6 +112,10 @@
           <span v-if="totalPrice" class="price-info">
             ${{ totalPrice.toFixed(5) }} ({{ totalInputTokens }} in / {{ totalOutputTokens }} out)
           </span>
+          <select v-if="rules.length > 0" v-model="selectedRule" class="mode-select rules-select">
+            <option value="">No rules</option>
+            <option v-for="r in rules" :key="r" :value="r">{{ r }}</option>
+          </select>
           <select v-model="selectedMode" class="mode-select">
             <option value="chat">Chat</option>
             <option value="readonly">Agent (Read Only)</option>
@@ -130,7 +134,7 @@
 <script>
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { tornadoChat, getConversations, loadConversation, deleteConversation } from "../api/aiTornadoService";
+import { tornadoChat, getInfo, getConversations, loadConversation, deleteConversation } from "../api/aiTornadoService";
 
 export default {
   computed: {
@@ -150,6 +154,8 @@ export default {
       error: "",
       toolCall: null,
       selectedMode: "readonly",
+      rules: [],
+      selectedRule: "",
       totalPrice: 0,
       totalInputTokens: 0,
       totalOutputTokens: 0
@@ -157,6 +163,7 @@ export default {
   },
   mounted() {
     this.fetchConversations();
+    this.loadInfo();
   },
   methods: {
     scrollToBottom() {
@@ -170,6 +177,14 @@ export default {
         this.conversations = await getConversations();
       } catch (e) {
         this.error = e.message || "Failed to load conversations.";
+      }
+    },
+    async loadInfo() {
+      try {
+        const data = await getInfo();
+        this.rules = (data && data.rules) ? data.rules : [];
+      } catch (e) {
+        this.rules = [];
       }
     },
     async loadConv(id) {
@@ -222,7 +237,7 @@ export default {
           toolName: null,
           toolArguments: null,
           mode: this.selectedMode,
-          rules: ""
+          rules: this.selectedRule || ""
         });
         this.isThinking = false;
         if (res.success) {
@@ -264,7 +279,7 @@ export default {
           toolName: this.toolCall.name,
           toolArguments: this.toolCall.arguments,
           mode: this.selectedMode,
-          rules: ""
+          rules: this.selectedRule || ""
         });
         this.isThinking = false;
         if (res.success) {

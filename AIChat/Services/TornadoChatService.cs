@@ -30,8 +30,8 @@ namespace Satrabel.AIChat.Services
             var conversation = _api.Chat.CreateConversation(new ChatRequest
             {
                 Model = new ChatModel(_model),
-                MaxTokens = _maxTokens,
-                Temperature = 0.1,
+                //MaxTokens = _maxTokens,
+                //Temperature = 0.1,
                 Tools = tools,
                 ParallelToolCalls = false,
                 //InvokeClrToolsAutomatically = false,

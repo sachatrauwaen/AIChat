@@ -25,9 +25,9 @@ namespace Dnn.Mcp.WebApi.Tools
             services.AddTransient<IMcpProvider, WriteSystemFileTool>();
 
             services.AddTransient<IMcpProvider, GetHtmlTool>();
-            services.AddTransient<IMcpProvider, GetUrlSeoTool>();
-            //services.AddTransient<IMcpProvider, GetHtmlModuleTool>();
-            //services.AddTransient<IMcpProvider, UpdateHtmlModuleTool>();
+            // GetUrlSeoTool moved to SeoTools project
+            services.AddTransient<IMcpProvider, GetHtmlModuleTool>();
+            services.AddTransient<IMcpProvider, UpdateHtmlModuleTool>();
             services.AddTransient<IMcpProvider, SendEmailTool>();
 
         }

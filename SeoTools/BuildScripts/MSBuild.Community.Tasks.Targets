@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ <PropertyGroup>
+   <MSBuildCommunityTasksPath Condition="'$(MSBuildCommunityTasksPath)' == ''">$(MSBuildProjectDirectory)\BuildScripts</MSBuildCommunityTasksPath>
+   <MSBuildCommunityTasksLib>$(MSBuildProjectDirectory)\..\AIChat\BuildScripts\Solution\packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll</MSBuildCommunityTasksLib>
+ </PropertyGroup>
+ <UsingTask AssemblyFile="$(MSBuildCommunityTasksLib)" TaskName="MSBuild.Community.Tasks.XmlRead" />
+ <UsingTask AssemblyFile="$(MSBuildCommunityTasksLib)" TaskName="MSBuild.Community.Tasks.FileUpdate" />
+ <UsingTask AssemblyFile="$(MSBuildCommunityTasksLib)" TaskName="MSBuild.Community.Tasks.Zip" />
+</Project>

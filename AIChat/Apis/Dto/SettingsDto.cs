@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace Satrabel.PersonaBar.AIChat.Apis
@@ -31,6 +31,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("maxTokens")]
         public int MaxTokens { get; set; }
+
+        [JsonProperty("historyMaxTokens")]
+        public int HistoryMaxTokens { get; set; }
+
+        [JsonProperty("historyMaxTurns")]
+        public int HistoryMaxTurns { get; set; }
 
         [JsonProperty("autoReadonlyTools")]
         public bool AutoReadonlyTools { get; set; }

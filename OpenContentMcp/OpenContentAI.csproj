@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A1B2C3D4-E5F6-47A8-B9C0-D1E2F3A4B5C6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Satrabel.OpenContentAI</RootNamespace>
+    <AssemblyName>Satrabel.OpenContentAI</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <LangVersion>8.0</LangVersion>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="DotNetNuke, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DotNetNuke.Core.9.10.2\lib\net45\DotNetNuke.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetNuke.DependencyInjection, Version=9.10.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DotNetNuke.DependencyInjection.9.10.2\lib\netstandard2.0\DotNetNuke.DependencyInjection.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=2.1.1.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.2.1.1\lib\net461\Microsoft.Extensions.DependencyInjection.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=2.1.1.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.2.1.1\lib\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="OpenContent">
+      <HintPath>..\refs\OpenContent\OpenContent.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.7\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=5.2.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.7\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Startup.cs" />
+    <Compile Include="Tools\AddOpenContentTool.cs" />
+    <Compile Include="Tools\Consts.cs" />
+    <Compile Include="Tools\GetOpenContentTool.cs" />
+    <Compile Include="Tools\ManageTemplatesTool.cs" />
+    <Compile Include="Tools\ToolsExtensions.cs" />
+    <Compile Include="Tools\UpdateOpenContentTool.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="airules\global.md" />
+    <None Include="app.config" />
+    <None Include="BuildScripts\ModuleDeploy.targets" />
+    <None Include="BuildScripts\ModulePackage.targets" />
+    <None Include="BuildScripts\MSBuild.Community.Tasks.Targets" />
+    <None Include="OpenContentAI.dnn" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="License.txt" />
+    <Content Include="ReleaseNotes.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AIChat\AIChat.csproj">
+      <Project>{61d86040-b778-457c-5d1f-db796d34c65c}</Project>
+      <Name>AIChat</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <Extension>zip</Extension>
+    <DNNFileName>OpenContentAI</DNNFileName>
+    <PackageName>OpenContentAI</PackageName>
+    <MSBuildCommunityTasksPath>$(SolutionDir)\packages\MSBuildTasks.1.4.0.88\tools</MSBuildCommunityTasksPath>
+  </PropertyGroup>
+  <Import Project="BuildScripts\ModulePackage.Targets" />
+  <Import Project="BuildScripts\ModuleDeploy.Targets" />
+  <Target Name="AfterBuild" DependsOnTargets="PackageModule;DeployModule">
+  </Target>
+</Project>

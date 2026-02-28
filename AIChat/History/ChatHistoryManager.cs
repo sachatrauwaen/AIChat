@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +14,7 @@ namespace Satrabel.AIChat.History
         private readonly string _dataDirectory;
         private readonly Dictionary<string, ChatConversation> _conversations;
         private readonly JsonSerializerSettings _jsonOptions;
+        private readonly ChatHistoryTrimmer _trimmer;
 
         public ChatHistoryManager(string dataDirectory = "ChatHistory")
         {
@@ -24,6 +25,8 @@ namespace Satrabel.AIChat.History
                 Formatting = Formatting.Indented,
                 
             };
+
+            _trimmer = new ChatHistoryTrimmer();
 
             Directory.CreateDirectory(_dataDirectory);
         }
@@ -181,6 +184,25 @@ namespace Satrabel.AIChat.History
                     conversation.Messages.Last().Timestamp - conversation.Messages.First().Timestamp :
                     TimeSpan.Zero
             };
+        }
+
+        /// <summary>
+        /// Builds a token- and turn-limited view of the specified conversation,
+        /// returning only the messages that should be used as context for the model.
+        /// </summary>
+        public IReadOnlyList<ChatMessage> GetContextMessages(
+            string conversationId,
+            ChatHistoryPolicy policy,
+            out ChatHistoryUsage usage)
+        {
+            usage = new ChatHistoryUsage();
+
+            if (!_conversations.TryGetValue(conversationId, out var conversation))
+            {
+                return Array.Empty<ChatMessage>();
+            }
+
+            return _trimmer.BuildContextMessages(conversation, policy, out usage);
         }
 
         // Replace the switch expression with a traditional switch statement to ensure compatibility with C# 7.3

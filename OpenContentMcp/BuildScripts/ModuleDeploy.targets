@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="windows-1252"?>
+
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <ImportPath Condition="Exists('$(MSBuildProjectDirectory)\..\custom.targets')">$(MSBuildProjectDirectory)\..\custom.targets</ImportPath>
+  </PropertyGroup>
+  <Import Project="$(ImportPath)" Condition=" '$(ImportPath)' != '' "/>
+
+	
+	<PropertyGroup>
+    <WebsitePath>c:\sacha\dnn\DNN910\</WebsitePath>
+  </PropertyGroup>	
+		
+  <Target Name="DeployModule" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    
+	  <Message Text="WebsitePath: $(WebsitePath)" Importance="High" />
+	  
+	<!-- Copy files into Website's bin folder -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAICHat.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAICHat.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+
+	  <!-- Copy files into Website's module folder -->
+	  <ItemGroup>
+		  <DeployInclude Include="**\*.md" Exclude="packages\**;BuildScripts\**" />		  
+	  </ItemGroup>
+	  <Copy SourceFiles="@(DeployInclude)" DestinationFolder="$(WebsitePath)\DesktopModules/OpenContentAIChat\%(RecursiveDir)" SkipUnchangedFiles="True" />
+
+
+  </Target>
+</Project>
