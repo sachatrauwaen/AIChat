@@ -265,7 +265,34 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     if (request.ToolApproved)
                     {
                         var toolResult = await toolsService.ExecuteToolAsync(request.ToolName, request.ToolArguments);
-                        conv.AddToolMessage(toolCallId, toolResult, true);
+
+                        // Pending conv has placeholder tool_result(s). Remove them and add the real result for the approved tool
+                        // (and "Skipped" for any others), so we never duplicate a tool_result for the same id.
+                        var toolCallIds = GetToolCallIdsFromLastAssistantMessage(conv);
+                        var placeholderCount = toolCallIds.Count >= 1 ? toolCallIds.Count : 1;
+
+                        for (int i = 0; i < placeholderCount; i++)
+                        {
+                            var lastMsg = conv.Messages.LastOrDefault();
+                            if (lastMsg != null)
+                                conv.RemoveMessage(lastMsg);
+                        }
+                        if (toolCallIds.Count >= 1)
+                        {
+                            foreach (var id in toolCallIds)
+                            {
+                                var content = string.Equals(id, toolCallId, StringComparison.Ordinal)
+                                    ? toolResult
+                                    : "Skipped: please use tools one at a time and wait for results.";
+                                var success = string.Equals(id, toolCallId, StringComparison.Ordinal);
+                                conv.AddToolMessage(id, content, success);
+                            }
+                        }
+                        else
+                        {
+                            conv.AddToolMessage(toolCallId, toolResult, true);
+                        }
+
                         chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
                         {
                             Role = MessageRole.Tool,
@@ -339,24 +366,17 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
                 for (int iteration = 0; iteration < maxIterations; iteration++)
                 {
-                    FunctionCall capturedCall = null;
-                    bool shouldAutoExecute = false;
-
-                    var response = await conv.GetResponseRich(async calls =>
-                    {
-                        var call = calls.FirstOrDefault();
-                        if (call == null) return;
-
-                        capturedCall = call;
-                        shouldAutoExecute = autoReadonlyTools && toolsService.IsReadOnly(call.Name)
-                                            || autoWriteTools && !toolsService.IsReadOnly(call.Name);
-                    });
+                    var response = await conv.GetResponseRich();
 
                     var usage = conv.MostRecentApiResult?.Usage;
                     totalInputTokens += usage?.PromptTokens ?? 0;
                     totalOutputTokens += usage?.CompletionTokens ?? 0;
 
-                    if (capturedCall != null)
+                    var functionBlocks = response?.Blocks?
+                        .Where(b => b.Type == ChatRichResponseBlockTypes.Function && b.FunctionCall != null)
+                        .ToList() ?? new List<ChatRichResponseBlock>();
+
+                    if (functionBlocks.Count > 0)
                     {
                         var assistantText = response?.Text;
                         if (!string.IsNullOrWhiteSpace(assistantText))
@@ -364,53 +384,60 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                             chatHistory.AddMessage(MessageRole.Assistant, assistantText);
                         }
 
-                        if (shouldAutoExecute)
+                        var firstCall = functionBlocks[0].FunctionCall;
+                        bool shouldAutoExecuteFirst = autoReadonlyTools && toolsService.IsReadOnly(firstCall.Name)
+                                            || autoWriteTools && !toolsService.IsReadOnly(firstCall.Name);
+
+                        for (int i = 0; i < functionBlocks.Count; i++)
                         {
-                            var lastMsg = conv.Messages.LastOrDefault();
-                            if (lastMsg != null && lastMsg.Role == ChatMessageRoles.Tool)
+                            var call = functionBlocks[i].FunctionCall;
+                            var toolCallId = call.ToolCall?.Id ?? call.Name;
+                            string toolResultContent;
+                            bool isFirst = (i == 0);
+
+                            if (isFirst && shouldAutoExecuteFirst)
                             {
-                                conv.RemoveMessage(lastMsg);
+                                var autoArgs = ParseToolArguments(call.Arguments);
+                                toolResultContent = await toolsService.ExecuteToolAsync(call.Name, autoArgs);
+                                conv.AddToolMessage(toolCallId, toolResultContent, true);
+                                chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
+                                {
+                                    Role = MessageRole.Tool,
+                                    ToolName = call.Name,
+                                    ToolArguments = ParseToolArguments(call.Arguments),
+                                    ToolCallId = toolCallId,
+                                    Content = toolResultContent
+                                });
+                                chatHistory.AddMessage(MessageRole.User,
+                                    $"[Tool Result for {call.Name}]: {toolResultContent}");
                             }
-
-                            var autoArgs = ParseToolArguments(capturedCall.Arguments);
-                            var toolResult = await toolsService.ExecuteToolAsync(capturedCall.Name, autoArgs);
-
-                            conv.AddToolMessage(capturedCall.ToolCall?.Id ?? capturedCall.Name, toolResult, true);
-
-                            chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
+                            else if (isFirst && !shouldAutoExecuteFirst)
                             {
-                                Role = MessageRole.Tool,
-                                ToolName = capturedCall.Name,
-                                ToolArguments = autoArgs,
-                                ToolCallId = capturedCall.ToolCall?.Id ?? capturedCall.Name,
-                                Content = toolResult
-                            });
-                            chatHistory.AddMessage(MessageRole.User,
-                                $"[Tool Result for {capturedCall.Name}]: {toolResult}");
-                            continue;
+                                var parsedArgs = ParseToolArguments(call.Arguments);
+                                pendingToolCall = new TornadoToolCallDto
+                                {
+                                    Id = toolCallId,
+                                    Name = call.Name,
+                                    Arguments = parsedArgs,
+                                    ReadOnly = toolsService.IsReadOnly(call.Name),
+                                    Description = call.Arguments
+                                };
+                                toolResultContent = "Pending user approval.";
+                                conv.AddToolMessage(toolCallId, toolResultContent, false);
+                            }
+                            else
+                            {
+                                toolResultContent = "Skipped: please use tools one at a time and wait for results.";
+                                conv.AddToolMessage(toolCallId, toolResultContent, false);
+                            }
                         }
-                        else
+
+                        if (pendingToolCall != null)
                         {
-                            // Remove the automatic tool result message appended by GetResponseRich
-                            var lastMsg = conv.Messages.LastOrDefault();
-                            if (lastMsg != null && lastMsg.Role == ChatMessageRoles.Tool)
-                            {
-                                conv.RemoveMessage(lastMsg);
-                            }
-
                             SavePendingConversation(chatHistory.Id, conv);
-
-                            var parsedArgs = ParseToolArguments(capturedCall.Arguments);
-                            pendingToolCall = new TornadoToolCallDto
-                            {
-                                Id = capturedCall.ToolCall?.Id ?? capturedCall.Name,
-                                Name = capturedCall.Name,
-                                Arguments = parsedArgs,
-                                ReadOnly = toolsService.IsReadOnly(capturedCall.Name),
-                                Description = capturedCall.Arguments
-                            };
                             break;
                         }
+                        continue;
                     }
                     else
                     {
@@ -488,6 +515,23 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 else if (m.Role == MessageRole.Assistant)
                     conv.AppendExampleChatbotOutput(m.Content);
             }
+        }
+
+        /// <summary>
+        /// Gets tool call ids from the last assistant message in the conversation (used when replacing placeholder tool results on approval).
+        /// </summary>
+        private static List<string> GetToolCallIdsFromLastAssistantMessage(Conversation conv)
+        {
+            var ids = new List<string>();
+            if (conv?.Messages == null) return ids;
+            var lastAssistant = conv.Messages.LastOrDefault(m => m.Role == ChatMessageRoles.Assistant);
+            if (lastAssistant?.ToolCalls == null) return ids;
+            foreach (ToolCall fc in lastAssistant.ToolCalls)
+            {
+                if (fc != null)
+                    ids.Add(fc.Id ?? fc.Id ?? string.Empty);
+            }
+            return ids;
         }
 
         private Dictionary<string, object> ParseToolArguments(string argsJson)
