@@ -1,6 +1,9 @@
 # DNN AI Assistant 
 
-This extension adds an AI-powered chat to the DNN PersonaBar, using LlmTornado (multi-model).
+This extension adds :
+1. an AI-powered Assistant to the DNN PersonaBar, using LlmTornado (multi-model).
+2. transform your DNN to a MCP Server that can be used from all AI clients supporting MCP (VS Code, Cursor, Claude Desktop Goose, ...)
+
 
 You need an API Key. 
 
@@ -25,11 +28,11 @@ For  Anthropic : [obtain an API key](https://console.anthropic.com).
 
 ## Settings
 
-<img width="935" height="905" alt="image" src="https://github.com/user-attachments/assets/bb398204-2418-4c7a-b7f3-d352eecded4a" />
+<img width="467" height="452" alt="image" src="https://github.com/user-attachments/assets/bb398204-2418-4c7a-b7f3-d352eecded4a" />
 
 ## MCP Server Settings
 
-<img width="934" height="903" alt="image" src="https://github.com/user-attachments/assets/6b294dd2-762b-4fa6-b87f-86116ab252e3" />
+<img width="467" height="451" alt="image" src="https://github.com/user-attachments/assets/6b294dd2-762b-4fa6-b87f-86116ab252e3" />
 
 ---
 # Documentation
