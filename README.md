@@ -8,18 +8,24 @@ You need an Anthropic account and [obtain an API key](https://console.anthropic.
 
 ---
 
-<img width="467" height="230" alt="image" src="https://github.com/user-attachments/assets/be0346a9-12fc-47f0-b318-4aa356979bf5" />
+<img width="467" height="455" alt="image" src="https://github.com/user-attachments/assets/afa6d140-4588-4613-8c6e-5976c7566d48" />
+
+
 
 
 
 ## Features
 - Chat with your DNN portal.
 - There are some tools available to help you manage your DNN portal, like page and module management, send email, get the HTML of a url, read and write files etc.
-- Ability to add your own Tools by implementing : IAITool. Example for Open Content [https://github.com/sachatrauwaen/OpenContentAICHat](https://github.com/sachatrauwaen/OpenContentAICHat)
+- Ability to add your own Tools by implementing . Examples in the source code.
 
 ## Settings
 
-<img width="372" height="460" alt="image" src="https://github.com/user-attachments/assets/95c2b4ad-ea0a-486b-a991-e5e8588bee36" />
+<img width="935" height="905" alt="image" src="https://github.com/user-attachments/assets/bb398204-2418-4c7a-b7f3-d352eecded4a" />
+
+## MCP Server Settings
+
+<img width="934" height="903" alt="image" src="https://github.com/user-attachments/assets/6b294dd2-762b-4fa6-b87f-86116ab252e3" />
 
 ---
 # Documentation
