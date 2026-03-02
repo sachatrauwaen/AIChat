@@ -1,8 +1,12 @@
 # DNN AI Assistant 
 
-This extension adds an AI-powered chat to the DNN PersonaBar, using Anthropic api.
+This extension adds an AI-powered chat to the DNN PersonaBar, using LlmTornado (multi-model).
 
-You need an Anthropic account and [obtain an API key](https://console.anthropic.com) to use this extension.
+You need an API Key. 
+
+For  Anthropic : [obtain an API key](https://console.anthropic.com).
+
+
 
 **Beta version. Make a backup before use.**
 
