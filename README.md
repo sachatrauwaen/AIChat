@@ -23,7 +23,7 @@ For  Anthropic : [obtain an API key](https://console.anthropic.com).
 
 ## Features
 - Chat with your DNN portal.
-- There are some tools available to help you manage your DNN portal, like page and module management, send email, get the HTML of a url, read and write files etc.
+- There are some tools available to help you manage your DNN portal, like page and module management, send email, get the HTML of a url, read and write files etc. [More info](https://github.com/sachatrauwaen/AIChat/wiki/Tools)
 - Ability to add your own Tools by implementing . Examples in the source code.
 
 ## Settings
