@@ -32,7 +32,7 @@ namespace Satrabel.AIChat.Tools
                 {
                     //var ps = (PortalSettings)arguments["PortalSettings"];
                     var pages = GetPages(PortalSettings.Current);
-                    var json = JsonConvert.SerializeObject(pages, Formatting.Indented);
+                    var json = JsonConvert.SerializeObject(pages, Formatting.None);
 
                     return new CallToolResult
                     {

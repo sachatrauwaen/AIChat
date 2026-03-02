@@ -17,8 +17,8 @@
 	  <Message Text="WebsitePath: $(WebsitePath)" Importance="High" />
 	  
 	<!-- Copy files into Website's bin folder -->
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAICHat.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAICHat.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAI.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.OpenContentAI.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
 
 	  <!-- Copy files into Website's module folder -->
 	  <ItemGroup>

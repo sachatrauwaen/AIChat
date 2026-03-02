@@ -29,6 +29,8 @@
           <input
             id="maxTokens"
             type="number"
+            min="1024"
+            step="1024"
             class="ai-settings__input ai-settings__input--short"
             v-model="maxTokens"
           />
@@ -40,6 +42,8 @@
           <input
             id="historyMaxTokens"
             type="number"
+            min="1024"
+            step="1024"
             class="ai-settings__input ai-settings__input--short"
             v-model="historyMaxTokens"
           />
@@ -51,6 +55,8 @@
           <input
             id="historyMaxTurns"
             type="number"
+            min="1"
+            step="1"
             class="ai-settings__input ai-settings__input--short"
             v-model="historyMaxTurns"
           />
@@ -113,6 +119,21 @@
             />
             <label for="autoWriteTools" class="ai-settings__checkbox-label">
               Write tools
+            </label>
+          </div>
+        </div>
+
+        <div class="ai-settings__field">
+          <label class="ai-settings__label">Debugging</label>
+          <div class="ai-settings__checkbox-row">
+            <input
+              type="checkbox"
+              class="ai-settings__checkbox"
+              v-model="debug"
+              id="debug"
+            />
+            <label for="debug" class="ai-settings__checkbox-label">
+              Debug mode
             </label>
           </div>
         </div>
@@ -225,7 +246,8 @@ export default {
            autoWriteTools: false,
            maxTokens: 0,
            historyMaxTokens: 0,
-           historyMaxTurns: 0
+           historyMaxTurns: 0,
+           debug: false
         };
     },
     methods: {
@@ -246,10 +268,11 @@ export default {
                 this.globalRules= data.globalRules || '';
                 this.tools = data.tools || [];
                 this.maxTokens = data.maxTokens || 1024;
-                this.historyMaxTokens = data.historyMaxTokens || 4096;
+                this.historyMaxTokens = data.historyMaxTokens ?? 8192;
                 this.historyMaxTurns = data.historyMaxTurns || 20;
                 this.autoReadonlyTools = data.autoReadonlyTools || false;
                 this.autoWriteTools = data.autoWriteTools || false;
+                this.debug = data.debug || false;
                 this.isThinking = false;
             } catch (e) {
                 this.message = e.message || "Failed to load settings.";
@@ -269,7 +292,8 @@ export default {
                   historyMaxTokens: this.historyMaxTokens,
                   historyMaxTurns: this.historyMaxTurns,
                   autoReadonlyTools: this.autoReadonlyTools,
-                  autoWriteTools: this.autoWriteTools
+                  autoWriteTools: this.autoWriteTools,
+                  debug: this.debug
               });
             
                 this.isThinking = false;

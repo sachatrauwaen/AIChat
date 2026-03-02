@@ -47,6 +47,10 @@ export function saveSettings(settings) {
   return sfRequest("POST", "SaveSettings", settings);
 }
 
+export function saveChatPreferences(preferences) {
+  return sfRequest("POST", "SaveChatPreferences", preferences);
+}
+
 export function getConversations() {
   return sfRequest("GET", "GetConversations");
 }

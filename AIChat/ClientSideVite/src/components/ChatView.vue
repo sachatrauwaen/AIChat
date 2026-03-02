@@ -87,6 +87,9 @@
         <div class="tool-header">
           <span class="tool-badge">Tool</span>
           <strong>{{ toolCall.name }}</strong>
+          <span v-if="pendingToolCalls.length > 0" class="tool-queue-info">
+            (+{{ pendingToolCalls.length }} more)
+          </span>
         </div>
         <pre v-if="toolCall.description" class="tool-args">{{ toolCall.description }}</pre>
         <div class="tool-actions">
@@ -134,7 +137,7 @@
 <script>
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { tornadoChat, getInfo, getConversations, loadConversation, deleteConversation } from "../api/aiTornadoService";
+import { tornadoChat, getInfo, getConversations, loadConversation, deleteConversation, saveChatPreferences } from "../api/aiTornadoService";
 
 export default {
   computed: {
@@ -153,13 +156,27 @@ export default {
       isThinking: false,
       error: "",
       toolCall: null,
+      pendingToolCalls: [],
       selectedMode: "readonly",
       rules: [],
       selectedRule: "",
       totalPrice: 0,
       totalInputTokens: 0,
-      totalOutputTokens: 0
+      totalOutputTokens: 0,
+      _preferencesLoaded: false
     };
+  },
+  watch: {
+    selectedMode(val) {
+      if (this._preferencesLoaded) {
+        // saveChatPreferences({ selectedMode: val, selectedRule: this.selectedRule }).catch(() => {});
+      }
+    },
+    selectedRule(val) {
+      if (this._preferencesLoaded) {
+        // saveChatPreferences({ selectedMode: this.selectedMode, selectedRule: val }).catch(() => {});
+      }
+    }
   },
   mounted() {
     this.fetchConversations();
@@ -183,8 +200,12 @@ export default {
       try {
         const data = await getInfo();
         this.rules = (data && data.rules) ? data.rules : [];
+        this.selectedMode = (data && data.selectedMode != null) ? data.selectedMode : "readonly";
+        this.selectedRule = (data && data.selectedRule != null) ? data.selectedRule : "";
+        this._preferencesLoaded = true;
       } catch (e) {
         this.rules = [];
+        this._preferencesLoaded = true;
       }
     },
     async loadConv(id) {
@@ -194,6 +215,7 @@ export default {
           this.conversationId = res.conversationId;
           this.messages = res.messages || [];
           this.toolCall = null;
+          this.pendingToolCalls = [];
           this.error = "";
           this.scrollToBottom();
         } else {
@@ -220,6 +242,7 @@ export default {
       this.userInput = "";
       this.error = "";
       this.toolCall = null;
+      this.pendingToolCalls = [];
       this.totalPrice = 0;
       this.totalInputTokens = 0;
       this.totalOutputTokens = 0;
@@ -244,6 +267,7 @@ export default {
           this.conversationId = res.conversationId;
           this.messages = res.messages || [];
           this.toolCall = res.toolCall || null;
+          this.pendingToolCalls = res.pendingToolCalls || [];
           this.totalPrice = res.totalPrice || 0;
           this.totalInputTokens = res.totalInputTokens || 0;
           this.totalOutputTokens = res.totalOutputTokens || 0;
@@ -278,6 +302,7 @@ export default {
           toolCallId: this.toolCall.id,
           toolName: this.toolCall.name,
           toolArguments: this.toolCall.arguments,
+          pendingToolCalls: this.pendingToolCalls.length > 0 ? this.pendingToolCalls : null,
           mode: this.selectedMode,
           rules: this.selectedRule || ""
         });
@@ -286,6 +311,7 @@ export default {
           this.conversationId = res.conversationId;
           this.messages = res.messages || [];
           this.toolCall = res.toolCall || null;
+          this.pendingToolCalls = res.pendingToolCalls || [];
           this.totalPrice = res.totalPrice || 0;
           this.totalInputTokens = res.totalInputTokens || 0;
           this.totalOutputTokens = res.totalOutputTokens || 0;
@@ -609,6 +635,12 @@ export default {
   padding: 2px 6px;
   border-radius: 3px;
   margin-right: 6px;
+}
+
+.tool-queue-info {
+  font-size: 12px;
+  color: #666;
+  margin-left: 4px;
 }
 
 .tool-args {

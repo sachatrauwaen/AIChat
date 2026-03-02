@@ -26,6 +26,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
         [JsonProperty("toolApproved")]
         public bool ToolApproved { get; set; } = true;
 
+        [JsonProperty("pendingToolCalls")]
+        public List<TornadoToolCallDto> PendingToolCalls { get; set; }
+
         [JsonProperty("mode")]
         public string Mode { get; set; }
 

@@ -13,6 +13,7 @@ using LlmTornado.Chat.Models;
 using LlmTornado.ChatFunctions;
 using LlmTornado.Code;
 using LlmTornado.Common;
+using LlmTornado.Models;
 using Newtonsoft.Json;
 using Satrabel.AIChat.History;
 using Satrabel.AIChat.Services;
@@ -50,6 +51,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         private const string TOOLS_SETTING = "AIChat_Tools";
         private const string AUTO_READONLY_TOOLS_SETTING = "AIChat_AUTO_READONLY_TOOLS";
         private const string AUTO_WRITE_TOOLS_SETTING = "AIChat_AUTO_WRITE_TOOLS";
+        private const string DEBUG_SETTING = "AIChat_Debug";
+        private const string SELECTED_MODE_SETTING = "AIChat_SelectedMode";
+        private const string SELECTED_RULE_SETTING = "AIChat_SelectedRule";
         private const int MAX_TOKENS_DEFAULT = 4096;
 
         public AITornadoController(IMcpRegistry mcpRegistry, IServiceProvider dependencyProvider)
@@ -113,7 +117,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var historyTokensValue = PortalController.GetPortalSetting(
                 HISTORY_MAX_TOKENS_SETTING,
                 PortalId,
-                policy.MaxContextTokens.ToString());
+                ChatHistoryPolicy.DefaultMaxContextTokens.ToString());
 
             if (int.TryParse(historyTokensValue, out var historyTokens) && historyTokens > 0)
             {
@@ -191,7 +195,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpPost]
         public async Task<TornadoChatResponse> Chat(TornadoChatRequest request)
         {
-            //DataCache.SetCache()
+            SaveChatPreferences(request.Mode, request.Rules);
             if (string.IsNullOrEmpty(GetApiKey()))
             {
                 return new TornadoChatResponse
@@ -247,7 +251,6 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
                 if (request.RunTool && !string.IsNullOrEmpty(request.ToolName))
                 {
-                    // Tool confirmation/rejection: try to reuse the cached Conversation with proper tool_use state
                     var existingConversation = GetPendingConversation(chatHistory.Id);
                     if (existingConversation != null)
                     {
@@ -262,61 +265,61 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
                     var toolCallId = request.ToolCallId ?? request.ToolName;
 
-                    if (request.ToolApproved)
+                    // Remove the placeholder for the current tool and replace with the real result
+                    ReplaceToolPlaceholder(conv, toolCallId,
+                        request.ToolApproved
+                            ? await toolsService.ExecuteToolAsync(request.ToolName, request.ToolArguments)
+                            : "The user refused this action.",
+                        request.ToolApproved);
+
+                    var toolResultContent = GetToolResultFromConv(conv, toolCallId);
+                    chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
                     {
-                        var toolResult = await toolsService.ExecuteToolAsync(request.ToolName, request.ToolArguments);
+                        Role = MessageRole.Tool,
+                        ToolName = request.ToolName,
+                        ToolArguments = request.ToolArguments,
+                        ToolCallId = toolCallId,
+                        Content = toolResultContent
+                    });
+                    chatHistory.AddMessage(MessageRole.User, $"[Tool Result for {request.ToolName}]: {toolResultContent}");
 
-                        // Pending conv has placeholder tool_result(s). Remove them and add the real result for the approved tool
-                        // (and "Skipped" for any others), so we never duplicate a tool_result for the same id.
-                        var toolCallIds = GetToolCallIdsFromLastAssistantMessage(conv);
-                        var placeholderCount = toolCallIds.Count >= 1 ? toolCallIds.Count : 1;
+                    // Check if there are more tools waiting for approval
+                    var remaining = request.PendingToolCalls;
+                    if (remaining != null && remaining.Count > 0)
+                    {
+                        // More tools need approval: return the next one without calling the LLM
+                        SavePendingConversation(chatHistory.Id, conv);
+                        historyManager.SaveConversation(chatHistory.Id);
 
-                        for (int i = 0; i < placeholderCount; i++)
-                        {
-                            var lastMsg = conv.Messages.LastOrDefault();
-                            if (lastMsg != null)
-                                conv.RemoveMessage(lastMsg);
-                        }
-                        if (toolCallIds.Count >= 1)
-                        {
-                            foreach (var id in toolCallIds)
-                            {
-                                var content = string.Equals(id, toolCallId, StringComparison.Ordinal)
-                                    ? toolResult
-                                    : "Skipped: please use tools one at a time and wait for results.";
-                                var success = string.Equals(id, toolCallId, StringComparison.Ordinal);
-                                conv.AddToolMessage(id, content, success);
-                            }
-                        }
-                        else
-                        {
-                            conv.AddToolMessage(toolCallId, toolResult, true);
-                        }
+                        var nextTool = remaining[0];
+                        var restOfQueue = remaining.Count > 1 ? remaining.Skip(1).ToList() : null;
 
-                        chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
+                        var queueMessages = chatHistory.Messages.Select(m => new TornadoMessageDto
                         {
-                            Role = MessageRole.Tool,
-                            ToolName = request.ToolName,
-                            ToolArguments = request.ToolArguments,
-                            ToolCallId = toolCallId,
-                            Content = toolResult
-                        });
-                        chatHistory.AddMessage(MessageRole.User, $"[Tool Result for {request.ToolName}]: {toolResult}");
+                            Role = m.Role.ToString().ToLowerInvariant(),
+                            Content = m.Content,
+                            ToolName = m.ToolName,
+                            ToolArguments = m.ToolArguments,
+                            ToolCallId = m.ToolCallId
+                        }).ToList();
+
+                        return new TornadoChatResponse
+                        {
+                            Success = true,
+                            Message = string.Empty,
+                            ConversationId = chatHistory.Id,
+                            Messages = queueMessages,
+                            ToolCall = nextTool,
+                            PendingToolCalls = restOfQueue,
+                            TotalInputTokens = 0,
+                            TotalOutputTokens = 0,
+                            TotalPrice = 0
+                        };
                     }
-                    else
-                    {
-                        conv.AddToolMessage(toolCallId, "The user refused this action.", false);
-                        chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
-                        {
-                            Role = MessageRole.Tool,
-                            ToolName = request.ToolName,
-                            ToolArguments = request.ToolArguments,
-                            ToolCallId = toolCallId,
-                            Content = "The user refused this action."
-                        });
-                        chatHistory.AddMessage(MessageRole.User, $"[Tool Result for {request.ToolName}]: The user refused this action.");
 
-                        // Tool refused: return without calling the LLM
+                    // No more pending tools. If the tool was refused and there are no remaining, skip LLM call.
+                    if (!request.ToolApproved)
+                    {
                         historyManager.SaveConversation(chatHistory.Id);
                         var refusedMessages = chatHistory.Messages.Select(m => new TornadoMessageDto
                         {
@@ -338,6 +341,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                             TotalPrice = 0
                         };
                     }
+
+                    // All tools resolved, fall through to call the LLM
                 }
                 else
                 {
@@ -362,11 +367,22 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 int totalInputTokens = 0;
                 int totalOutputTokens = 0;
                 TornadoToolCallDto pendingToolCall = null;
+                List<TornadoToolCallDto> remainingPendingToolCalls = null;
                 const int maxIterations = 10;
 
                 for (int iteration = 0; iteration < maxIterations; iteration++)
                 {
-                    var response = await conv.GetResponseRich();
+                    ChatRichResponse response;
+                    try
+                    {
+                        response = await conv.GetResponseRich();
+                    }
+                    catch (Exception apiEx) when (apiEx.Message != null && apiEx.Message.Contains("rate_limit"))
+                    {
+                        Logger.Warn($"Rate limit hit on iteration {iteration}: {apiEx.Message}");
+                        throw new InvalidOperationException(
+                            $"Rate limit exceeded. Please wait a moment and try again. inputTokens: {totalInputTokens} / outputTokens: {totalOutputTokens}", apiEx);
+                    }
 
                     var usage = conv.MostRecentApiResult?.Usage;
                     totalInputTokens += usage?.PromptTokens ?? 0;
@@ -384,59 +400,85 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                             chatHistory.AddMessage(MessageRole.Assistant, assistantText);
                         }
 
-                        var firstCall = functionBlocks[0].FunctionCall;
-                        bool shouldAutoExecuteFirst = autoReadonlyTools && toolsService.IsReadOnly(firstCall.Name)
-                                            || autoWriteTools && !toolsService.IsReadOnly(firstCall.Name);
+                        var autoExecute = new List<FunctionCall>();
+                        var needsApproval = new List<FunctionCall>();
 
-                        for (int i = 0; i < functionBlocks.Count; i++)
+                        foreach (var block in functionBlocks)
                         {
-                            var call = functionBlocks[i].FunctionCall;
-                            var toolCallId = call.ToolCall?.Id ?? call.Name;
-                            string toolResultContent;
-                            bool isFirst = (i == 0);
+                            var call = block.FunctionCall;
+                            bool shouldAuto = (autoReadonlyTools && toolsService.IsReadOnly(call.Name))
+                                           || (autoWriteTools && !toolsService.IsReadOnly(call.Name));
+                            if (shouldAuto)
+                                autoExecute.Add(call);
+                            else
+                                needsApproval.Add(call);
+                        }
 
-                            if (isFirst && shouldAutoExecuteFirst)
+                        // Execute all auto-executable tools in parallel
+                        if (autoExecute.Count > 0)
+                        {
+                            var autoTasks = autoExecute.Select(async call =>
                             {
-                                var autoArgs = ParseToolArguments(call.Arguments);
-                                toolResultContent = await toolsService.ExecuteToolAsync(call.Name, autoArgs);
-                                conv.AddToolMessage(toolCallId, toolResultContent, true);
+                                var args = ParseToolArguments(call.Arguments);
+                                var result = await toolsService.ExecuteToolAsync(call.Name, args);
+                                return new { Call = call, Args = args, Result = result };
+                            }).ToArray();
+
+                            var autoResults = await Task.WhenAll(autoTasks);
+
+                            foreach (var ar in autoResults)
+                            {
+                                var toolCallId = ar.Call.ToolCall?.Id ?? ar.Call.Name;
+                                conv.AddToolMessage(toolCallId, ar.Result, true);
                                 chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
                                 {
                                     Role = MessageRole.Tool,
-                                    ToolName = call.Name,
-                                    ToolArguments = ParseToolArguments(call.Arguments),
+                                    ToolName = ar.Call.Name,
+                                    ToolArguments = ar.Args,
                                     ToolCallId = toolCallId,
-                                    Content = toolResultContent
+                                    Content = ar.Result
                                 });
                                 chatHistory.AddMessage(MessageRole.User,
-                                    $"[Tool Result for {call.Name}]: {toolResultContent}");
-                            }
-                            else if (isFirst && !shouldAutoExecuteFirst)
-                            {
-                                var parsedArgs = ParseToolArguments(call.Arguments);
-                                pendingToolCall = new TornadoToolCallDto
-                                {
-                                    Id = toolCallId,
-                                    Name = call.Name,
-                                    Arguments = parsedArgs,
-                                    ReadOnly = toolsService.IsReadOnly(call.Name),
-                                    Description = call.Arguments
-                                };
-                                toolResultContent = "Pending user approval.";
-                                conv.AddToolMessage(toolCallId, toolResultContent, false);
-                            }
-                            else
-                            {
-                                toolResultContent = "Skipped: please use tools one at a time and wait for results.";
-                                conv.AddToolMessage(toolCallId, toolResultContent, false);
+                                    $"[Tool Result for {ar.Call.Name}]: {ar.Result}");
                             }
                         }
 
-                        if (pendingToolCall != null)
+                        // Queue tools that need approval with placeholders
+                        if (needsApproval.Count > 0)
                         {
+                            foreach (var call in needsApproval)
+                            {
+                                var toolCallId = call.ToolCall?.Id ?? call.Name;
+                                conv.AddToolMessage(toolCallId, "Pending user approval.", false);
+                            }
+
+                            var first = needsApproval[0];
+                            pendingToolCall = new TornadoToolCallDto
+                            {
+                                Id = first.ToolCall?.Id ?? first.Name,
+                                Name = first.Name,
+                                Arguments = ParseToolArguments(first.Arguments),
+                                ReadOnly = toolsService.IsReadOnly(first.Name),
+                                Description = first.Arguments
+                            };
+
+                            if (needsApproval.Count > 1)
+                            {
+                                remainingPendingToolCalls = needsApproval.Skip(1).Select(call => new TornadoToolCallDto
+                                {
+                                    Id = call.ToolCall?.Id ?? call.Name,
+                                    Name = call.Name,
+                                    Arguments = ParseToolArguments(call.Arguments),
+                                    ReadOnly = toolsService.IsReadOnly(call.Name),
+                                    Description = call.Arguments
+                                }).ToList();
+                            }
+
                             SavePendingConversation(chatHistory.Id, conv);
                             break;
                         }
+
+                        // All tools were auto-executed, continue the loop for the next LLM call
                         continue;
                     }
                     else
@@ -474,6 +516,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     ConversationId = chatHistory.Id,
                     Messages = messages,
                     ToolCall = pendingToolCall,
+                    PendingToolCalls = remainingPendingToolCalls,
                     TotalInputTokens = totalInputTokens,
                     TotalOutputTokens = totalOutputTokens,
                     TotalPrice = CalculatePrice(model, totalInputTokens, totalOutputTokens)
@@ -518,20 +561,41 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         }
 
         /// <summary>
-        /// Gets tool call ids from the last assistant message in the conversation (used when replacing placeholder tool results on approval).
+        /// Replaces a "Pending user approval." placeholder tool_result in the conversation
+        /// with the real result. Finds the tool message by matching <paramref name="toolCallId"/>
+        /// against the ToolCallId on each Tool-role message.
         /// </summary>
-        private static List<string> GetToolCallIdsFromLastAssistantMessage(Conversation conv)
+        private static void ReplaceToolPlaceholder(Conversation conv, string toolCallId, string content, bool success)
         {
-            var ids = new List<string>();
-            if (conv?.Messages == null) return ids;
-            var lastAssistant = conv.Messages.LastOrDefault(m => m.Role == ChatMessageRoles.Assistant);
-            if (lastAssistant?.ToolCalls == null) return ids;
-            foreach (ToolCall fc in lastAssistant.ToolCalls)
+            if (conv?.Messages == null) return;
+
+            for (int i = conv.Messages.Count - 1; i >= 0; i--)
             {
-                if (fc != null)
-                    ids.Add(fc.Id ?? fc.Id ?? string.Empty);
+                var msg = conv.Messages[i];
+                if (msg.Role == ChatMessageRoles.Tool && msg.ToolCallId == toolCallId)
+                {
+                    conv.EditMessageContent(msg, content);
+                    msg.ToolInvocationSucceeded = success;
+                    return;
+                }
             }
-            return ids;
+
+            conv.AddToolMessage(toolCallId, content, success);
+        }
+
+        /// <summary>
+        /// Reads back the tool result content for a given tool call id from the conversation.
+        /// </summary>
+        private static string GetToolResultFromConv(Conversation conv, string toolCallId)
+        {
+            if (conv?.Messages == null) return string.Empty;
+            for (int i = conv.Messages.Count - 1; i >= 0; i--)
+            {
+                var msg = conv.Messages[i];
+                if (msg.Role == ChatMessageRoles.Tool && msg.ToolCallId == toolCallId)
+                    return msg.Content ?? string.Empty;
+            }
+            return string.Empty;
         }
 
         private Dictionary<string, object> ParseToolArguments(string argsJson)
@@ -627,24 +691,19 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             try
             {
                 var apiKey = PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
-                var models = ChatModel.AllModels;
-                res.Models = new List<ModelDto>();
-                foreach (var model in models)
+                res.Models = ChatModel.AllModels.Select(m=> new ModelDto
                 {
-                    res.Models.Add(new ModelDto
-                    {
-                        Value = model.Name,
-                        Name = $"{model.Provider.ToString()} - {model.Name}" 
-                    });
-                }
-               
+                    Value = m.Name,
+                    Name = $"{m.Provider.ToString()} - {m.Name}"
+                }).OrderBy(m=> m.Name).ToList();
                 res.ApiKey = string.IsNullOrEmpty(apiKey) ? "" : "********";
                 res.MaxTokens = int.Parse(PortalController.GetPortalSetting(MAX_TOKENS_SETTING, PortalId, MAX_TOKENS_DEFAULT.ToString()));
-                res.HistoryMaxTokens = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TOKENS_SETTING, PortalId, "4096"));
+                res.HistoryMaxTokens = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TOKENS_SETTING, PortalId, ChatHistoryPolicy.DefaultMaxContextTokens.ToString()));
                 res.HistoryMaxTurns = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TURNS_SETTING, PortalId, "20"));
                 res.Model = PortalController.GetPortalSetting(MODEL_SETTING, PortalId, ChatModel.Anthropic.Claude4.Sonnet250514);
                 res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
                 res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
+                res.Debug = bool.Parse(PortalController.GetPortalSetting(DEBUG_SETTING, PortalId, "false"));
                 var tools = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "").Split(',').ToList();
                 var toolsService = CreateToolService();
                 res.Tools = toolsService.GetAllTools().Select(t => new ToolDto
@@ -652,7 +711,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     Name = t.ResolvedName,
                     Description = t.ResolvedDescription,
                     Active = tools.Contains(t.ResolvedName) || string.IsNullOrEmpty(GetApiKey()), // if no API key, all tools are active
-                }).ToList();
+                }).OrderBy(t=> t.Name).ToList();
 
                 var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
 
@@ -704,6 +763,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
             PortalController.UpdatePortalSetting(PortalId, AUTO_READONLY_TOOLS_SETTING, request.AutoReadonlyTools.ToString());
             PortalController.UpdatePortalSetting(PortalId, AUTO_WRITE_TOOLS_SETTING, request.AutoWriteTools.ToString());
+            PortalController.UpdatePortalSetting(PortalId, DEBUG_SETTING, request.Debug.ToString());
             if (request.Tools != null)
             {
                 PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
@@ -729,6 +789,29 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             {
                 File.WriteAllText(Path.Combine(rulesPath, rule.Name + ".md"), rule.Rule);
             }
+        }
+
+        [ValidateAntiForgeryToken]
+        [HttpPost]
+        public void SaveChatPreferences(ChatPreferencesDto request)
+        {
+            if (request == null) return;
+
+            SaveChatPreferences(request.SelectedMode, request.SelectedRule);
+        }
+
+        private void SaveChatPreferences(string mode, string rule)
+        {
+            var validModes = new[] { "chat", "readonly", "agent" };
+            if (string.IsNullOrEmpty(mode) || !validModes.Contains(mode))
+                mode = "readonly";
+
+            var selectedMode = PortalController.GetPortalSetting(SELECTED_MODE_SETTING, PortalId, "readonly");
+            var selectedRule = PortalController.GetPortalSetting(SELECTED_RULE_SETTING, PortalId, "");
+            if (mode != selectedMode)
+                PortalController.UpdatePortalSetting(PortalId, SELECTED_MODE_SETTING, mode);
+            if (rule != selectedRule)
+                PortalController.UpdatePortalSetting(PortalId, SELECTED_RULE_SETTING, rule ?? "");
         }
 
         [HttpGet]
@@ -757,6 +840,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             res.Rules.AddRange(GetRules(rulesPath));
             res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
             res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
+            res.Debug = bool.Parse(PortalController.GetPortalSetting(DEBUG_SETTING, PortalId, "false"));
+            res.SelectedMode = PortalController.GetPortalSetting(SELECTED_MODE_SETTING, PortalId, "readonly");
+            res.SelectedRule = PortalController.GetPortalSetting(SELECTED_RULE_SETTING, PortalId, "");
             res.Success = true;
             return res;
         }

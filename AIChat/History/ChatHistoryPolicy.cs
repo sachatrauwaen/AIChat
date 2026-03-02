@@ -9,6 +9,11 @@ namespace Satrabel.AIChat.History
     public class ChatHistoryPolicy
     {
         /// <summary>
+        /// Default maximum context tokens when no portal setting is configured.
+        /// </summary>
+        public const int DefaultMaxContextTokens = 8192;
+
+        /// <summary>
         /// Approximate maximum number of tokens to keep in the
         /// replayed context. Uses the same rough heuristic as
         /// <see cref="ChatConversation.GetTokenCount"/> (4 chars ~= 1 token).
@@ -44,7 +49,7 @@ namespace Satrabel.AIChat.History
         {
             return new ChatHistoryPolicy
             {
-                MaxContextTokens = 4096,
+                MaxContextTokens = DefaultMaxContextTokens,
                 MaxUserTurns = 20,
                 MinMessagesToKeep = 4,
                 ToolTokenWeight = 4.0

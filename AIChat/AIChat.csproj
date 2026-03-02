@@ -161,6 +161,7 @@
   <ItemGroup>
     <Compile Include="Apis\Dto\RuleDto.cs" />
     <Compile Include="Apis\Dto\TornadoDeleteConversationRequest.cs" />
+    <Compile Include="Apis\Dto\ChatPreferencesDto.cs" />
     <Compile Include="Apis\Dto\SettingsDto.cs" />
     <Compile Include="Apis\Dto\MarkdownPreferences.cs" />
     <Compile Include="Apis\Dto\InfoDto.cs" />

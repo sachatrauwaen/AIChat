@@ -75,6 +75,7 @@
     <Compile Include="Tools\Consts.cs" />
     <Compile Include="Tools\GetOpenContentTool.cs" />
     <Compile Include="Tools\ManageTemplatesTool.cs" />
+    <Compile Include="Tools\TemplateInfo.cs" />
     <Compile Include="Tools\ToolsExtensions.cs" />
     <Compile Include="Tools\UpdateOpenContentTool.cs" />
   </ItemGroup>

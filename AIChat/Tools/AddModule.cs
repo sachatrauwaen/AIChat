@@ -64,159 +64,144 @@ namespace Satrabel.AIChat.Tools
                     var moduleName = arguments["moduleName"].ToString();
                     var paneName = arguments.ContainsKey("paneName") ? arguments["paneName"].ToString() : "ContentPane";
                     var title = arguments.ContainsKey("title") ? arguments["title"].ToString() : "";
-                    
-                    var result = AddModule(tabId, moduleName, paneName, title);
-
-                    return new CallToolResult
+                    try
                     {
-                        Content = new List<ContentBlock>
+                        var result = AddModule(tabId, moduleName, paneName, title);
+                        return new CallToolResult
                         {
-                            new TextContentBlock
+                            Content = new List<ContentBlock>
                             {
-                                Text = result
+                                new TextContentBlock
+                                {
+                                    Text = $"Module added with ModuleDefID: {result.ModuleID}"
+                                }
                             }
-                        }
-                    };
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        return new CallToolResult
+                        {
+                            Content = new List<ContentBlock>
+                            {
+                                new TextContentBlock
+                                {
+                                    Text = $"Error adding module: {ex.Message}"
+                                }
+                            }
+                        };
+                    }
                 }
             });
         }
 
-        public string AddModule(Int64 tabId, string moduleName, string paneName = "ContentPane", string title = "")
+        public static ModuleInfo AddModule(Int64 tabId, string moduleName, string paneName = "ContentPane", string title = "")
         {
-            try
+
+            if (tabId <= 0)
             {
-                if (tabId <= 0)
-                {
-                    return "Error: Invalid page ID";
-                }
-
-                if (string.IsNullOrEmpty(moduleName))
-                {
-                    return "Error: Module definition must be specified";
-                }
-
-                // Get the portal ID
-                var portalId = PortalSettings.Current.PortalId;
-
-                // Get the tab (page)
-                var tabController = new TabController();
-                var tab = tabController.GetTab((int)tabId, portalId);
-                if (tab == null)
-                {
-                    return $"Error: Page with ID {tabId} not found";
-                }
-
-                // Find the module definition
-                var moduleDefinitionController = new ModuleDefinitionController();
-                var desktopModuleController = new DesktopModuleController();
-
-                var desktopModule = DesktopModuleController.GetDesktopModuleByModuleName(moduleName, portalId);
-
-                if (desktopModule == null)
-                {
-                    return $"Error: Module '{moduleName}' not found.";
-                }
-
-                // Validate pane name
-                if (string.IsNullOrEmpty(paneName))
-                {
-                    paneName = "ContentPane"; // Default pane
-                }
-
-
-                var message = default(KeyValuePair<HttpStatusCode, string>);
-               
-                if (!TabPermissionController.CanManagePage(tab))
-                {
-                    return "InsufficientPermissions";
-                }
-
-                var moduleList = new List<ModuleInfo>();
-
-                foreach (var objModuleDefinition in ModuleDefinitionController.GetModuleDefinitionsByDesktopModuleID(desktopModule.DesktopModuleID).Values)
-                {
-                    var objModule = new ModuleInfo();
-                    objModule.Initialize(portalId);
-
-                    objModule.PortalID = portalId;
-                    objModule.TabID = (int)tabId;
-                    objModule.ModuleOrder = 0;
-                    objModule.ModuleTitle = string.IsNullOrEmpty(title) ? objModuleDefinition.FriendlyName : title;
-                    objModule.PaneName = paneName;
-                    objModule.ModuleDefID = objModuleDefinition.ModuleDefID;
-                    if (objModuleDefinition.DefaultCacheTime > 0)
-                    {
-                        objModule.CacheTime = objModuleDefinition.DefaultCacheTime;
-                        if (PortalSettings.Current.DefaultModuleId > Null.NullInteger &&
-                            PortalSettings.Current.DefaultTabId > Null.NullInteger)
-                        {
-                            var defaultModule = ModuleController.Instance.GetModule(
-                                PortalSettings.Current.DefaultModuleId,
-                                PortalSettings.Current.DefaultTabId,
-                                true);
-                            if (defaultModule != null)
-                            {
-                                objModule.CacheTime = defaultModule.CacheTime;
-                            }
-                        }
-                    }
-
-                    ModuleController.Instance.InitialModulePermission(objModule, objModule.TabID, 0);
-
-                    if (PortalSettings.Current.ContentLocalizationEnabled)
-                    {
-                        var defaultLocale = LocaleController.Instance.GetDefaultLocale(PortalSettings.Current.PortalId);
-
-                        // check whether original tab is exists, if true then set culture code to default language,
-                        // otherwise set culture code to current.
-                        objModule.CultureCode =
-                            TabController.Instance.GetTabByCulture(objModule.TabID, PortalSettings.Current.PortalId, defaultLocale) !=
-                            null
-                                ? defaultLocale.Code
-                                : PortalSettings.Current.CultureCode;
-                    }
-                    else
-                    {
-                        objModule.CultureCode = Null.NullString;
-                    }
-
-                    objModule.AllTabs = false;
-                    objModule.Alignment = null;
-
-                    ModuleController.Instance.AddModule(objModule);
-                    moduleList.Add(objModule);
-
-                    // Set position so future additions to page can operate correctly
-                    var position = ModuleController.Instance.GetTabModule(objModule.TabModuleID).ModuleOrder + 1;
-                }
-
-                if (moduleList == null)
-                {
-                    return message.Value;
-                }
-
-                if (moduleList.Count == 0)
-                {
-                    return "Prompt_NoModulesAdded";
-                }
-
-                var modules = moduleList.Select(newModule => ModuleController.Instance.GetTabModule(newModule.TabModuleID)).ToList();
-
-                return $"ModuleAdded  {modules.Count}, {(moduleList.Count == 1 ? string.Empty : "s")}";
-
-
+                throw new Exception("Error: Invalid page ID");
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrEmpty(moduleName))
             {
-                // Return error information
-                var error = new
-                {
-                    Success = false,
-                    Message = $"Error adding module: {ex.Message}"
-                };
-
-                return JsonConvert.SerializeObject(error);
+                throw new Exception("Error: Module definition must be specified");
             }
+
+            // Get the portal ID
+            var portalId = PortalSettings.Current.PortalId;
+
+            // Get the tab (page)
+            var tabController = new TabController();
+            var tab = tabController.GetTab((int)tabId, portalId);
+            if (tab == null)
+            {
+                throw new Exception($"Error: Page with ID {tabId} not found");
+            }
+
+            // Find the module definition
+            var moduleDefinitionController = new ModuleDefinitionController();
+            var desktopModuleController = new DesktopModuleController();
+
+            var desktopModule = DesktopModuleController.GetDesktopModuleByModuleName(moduleName, portalId);
+
+            if (desktopModule == null)
+            {
+                throw new Exception($"Error: Module '{moduleName}' not found.");
+            }
+
+            // Validate pane name
+            if (string.IsNullOrEmpty(paneName))
+            {
+                paneName = "ContentPane"; // Default pane
+            }
+
+
+            var message = default(KeyValuePair<HttpStatusCode, string>);
+
+            if (!TabPermissionController.CanManagePage(tab))
+            {
+                throw new Exception("InsufficientPermissions");
+            }
+
+            var moduleList = new List<ModuleInfo>();
+
+            var objModuleDefinition = ModuleDefinitionController.GetModuleDefinitionsByDesktopModuleID(desktopModule.DesktopModuleID).Values.FirstOrDefault();
+
+            var objModule = new ModuleInfo();
+            objModule.Initialize(portalId);
+
+            objModule.PortalID = portalId;
+            objModule.TabID = (int)tabId;
+            objModule.ModuleOrder = 0;
+            objModule.ModuleTitle = string.IsNullOrEmpty(title) ? objModuleDefinition.FriendlyName : title;
+            objModule.PaneName = paneName;
+            objModule.ModuleDefID = objModuleDefinition.ModuleDefID;
+            if (objModuleDefinition.DefaultCacheTime > 0)
+            {
+                objModule.CacheTime = objModuleDefinition.DefaultCacheTime;
+                if (PortalSettings.Current.DefaultModuleId > Null.NullInteger &&
+                    PortalSettings.Current.DefaultTabId > Null.NullInteger)
+                {
+                    var defaultModule = ModuleController.Instance.GetModule(
+                        PortalSettings.Current.DefaultModuleId,
+                        PortalSettings.Current.DefaultTabId,
+                        true);
+                    if (defaultModule != null)
+                    {
+                        objModule.CacheTime = defaultModule.CacheTime;
+                    }
+                }
+            }
+
+            ModuleController.Instance.InitialModulePermission(objModule, objModule.TabID, 0);
+
+            if (PortalSettings.Current.ContentLocalizationEnabled)
+            {
+                var defaultLocale = LocaleController.Instance.GetDefaultLocale(PortalSettings.Current.PortalId);
+
+                // check whether original tab is exists, if true then set culture code to default language,
+                // otherwise set culture code to current.
+                objModule.CultureCode =
+                    TabController.Instance.GetTabByCulture(objModule.TabID, PortalSettings.Current.PortalId, defaultLocale) !=
+                    null
+                        ? defaultLocale.Code
+                        : PortalSettings.Current.CultureCode;
+            }
+            else
+            {
+                objModule.CultureCode = Null.NullString;
+            }
+
+            objModule.AllTabs = false;
+            objModule.Alignment = null;
+
+            ModuleController.Instance.AddModule(objModule);
+            moduleList.Add(objModule);
+
+            // Set position so future additions to page can operate correctly
+            var position = ModuleController.Instance.GetTabModule(objModule.TabModuleID).ModuleOrder + 1;
+            return objModule;
         }
     }
 }

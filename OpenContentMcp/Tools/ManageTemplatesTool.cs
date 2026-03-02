@@ -1,12 +1,18 @@
+using Dnn.Mcp.WebApi;
+using Dnn.Mcp.WebApi.Models;
+using Dnn.Mcp.WebApi.Services;
+using DotNetNuke.Entities.Modules;
+using DotNetNuke.Entities.Modules.Prompt;
+using DotNetNuke.Entities.Portals;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Satrabel.AIChat.Tools;
+using Satrabel.OpenContent.Components;
+using Satrabel.OpenContent.Components.Datasource;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Dnn.Mcp.WebApi;
-using Dnn.Mcp.WebApi.Models;
-using Dnn.Mcp.WebApi.Services;
-using DotNetNuke.Entities.Portals;
-using Newtonsoft.Json;
 
 namespace Satrabel.OpenContentMcp.Tools
 {
@@ -14,19 +20,128 @@ namespace Satrabel.OpenContentMcp.Tools
     {
         public void Register(IMcpRegistry registry)
         {
+
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "init-opencontent-module",
+                Title = "Init OpenContent Module",
+                Description = "Init the OpenContent module",
+                Parameters = new List<ToolParameter>(){
+                    new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page containing the module",
+                        Required = true,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "moduleId",
+                        Description = "The ID of the OpenContent module",
+                        Required = true,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "templateName",
+                        Description = "The name of the template",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+
+                    var tabId = Convert.ToInt32(arguments["tabId"]);
+                    var moduleId = Convert.ToInt32(arguments["moduleId"]);
+                    var templateName = arguments["templateName"].ToString();
+                    var result = InitOpenContentModule(tabId, moduleId, templateName);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                            {
+                                new TextContentBlock
+                                {
+                                    Text = result
+                                }
+                            }
+                    };
+
+                }
+            });
+
+            registry.RegisterTool(new ToolDefinition
+            {
+                Name = "add-opencontent-module",
+                Title = "Add OpenContent Module",
+                Description = "Add the OpenContent module",
+                Parameters = new List<ToolParameter>(){
+                    new ToolParameter
+                    {
+                        Name = "tabId",
+                        Description = "The ID of the page containing the module",
+                        Required = true,
+                        Type = "number"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "paneName",
+                        Description = "The name of the pane to add the module to (default: ContentPane)",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "title",
+                        Description = "The title of the module",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "templateName",
+                        Description = "The name of the template",
+                        Required = true,
+                        Type = "string"
+                    }
+                },
+                Handler = (arguments) =>
+                {
+
+                    var tabId = Convert.ToInt32(arguments["tabId"]);
+                    var paneName = arguments.ContainsKey("paneName") ? arguments["paneName"].ToString() : "ContentPane";
+                    var title = arguments.ContainsKey("title") ? arguments["title"].ToString() : "OpenContent Module";
+                    var templateName = arguments["templateName"].ToString();
+                    var mod = AddModuleTool.AddModule(tabId, "OpenContent", paneName, title);
+                    var result = InitOpenContentModule(tabId, mod.ModuleID, templateName);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock>
+                            {
+                                new TextContentBlock
+                                {
+                                    Text = result
+                                }
+                            }
+                    };
+
+                }
+            });
+
             // Register list-opencontent-templates tool
             registry.RegisterTool(new ToolDefinition
             {
-                Name = "list-opencontent-folders",
-                Title = "List OpenContent Folders",
-                Description = "List all available OpenContent folders in the portal",
+                Name = "list-opencontent-templates",
+                Title = "List OpenContent templates",
+                Description = "List all available OpenContent templates in the portal",
                 Parameters = new List<ToolParameter>(),
+                ReadOnly = true,
                 Handler = (arguments) =>
                 {
                     try
                     {
-                        var templates = ListFolders();
-                        
+                        var templates = ListTemplates();
+
                         return new CallToolResult
                         {
                             Content = new List<ContentBlock>
@@ -58,15 +173,16 @@ namespace Satrabel.OpenContentMcp.Tools
             // Register get-opencontent-template tool
             registry.RegisterTool(new ToolDefinition
             {
-                Name = "get-opencontent-folder",
-                Title = "Get OpenContent Folder",
-                Description = "Get details of a specific OpenContent Folder",
+                Name = "get-opencontent-template",
+                Title = "Get OpenContent Template",
+                Description = "Get details of a specific OpenContent Template",
+                ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter
                     {
                         Name = "name",
-                        Description = "The name of the OpenContent folder",
+                        Description = "The name of the OpenContent template",
                         Required = true,
                         Type = "string"
                     }
@@ -76,8 +192,8 @@ namespace Satrabel.OpenContentMcp.Tools
                     try
                     {
                         var templatePath = arguments["name"].ToString();
-                        var templateDetails = GetFolder(templatePath);
-                        
+                        var templateDetails = GetTemplate(templatePath);
+
                         return new CallToolResult
                         {
                             Content = new List<ContentBlock>
@@ -109,36 +225,57 @@ namespace Satrabel.OpenContentMcp.Tools
             // Register create-opencontent-template tool
             registry.RegisterTool(new ToolDefinition
             {
-                Name = "create-opencontent-template",
-                Title = "Create OpenContent Template",
-                Description = "Create a new OpenContent template",
+                Name = "save-opencontent-template",
+                Title = "Save OpenContent Template",
+                Description = "Save a new OpenContent template",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter
                     {
-                        Name = "templateName",
+                        Name = "name",
                         Description = "The name of the template",
                         Required = true,
                         Type = "string"
                     },
                     new ToolParameter
                     {
-                        Name = "templateContent",
+                        Name = "template",
                         Description = "The content of the template (HTML/Handlebars)",
-                        Required = true,
-                        Type = "string"
-                    },
-                    new ToolParameter
-                    {
-                        Name = "schemaJson",
-                        Description = "Optional JSON schema for the template",
                         Required = false,
                         Type = "string"
                     },
                     new ToolParameter
                     {
-                        Name = "optionsJson",
-                        Description = "Optional JSON options for the template",
+                        Name = "schema",
+                        Description = "The content of the schema",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "options",
+                        Description = "The content of the options",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "data",
+                        Description = "The content of the data",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "css",
+                        Description = "The content of the CSS",
+                        Required = false,
+                        Type = "string"
+                    },
+                    new ToolParameter
+                    {
+                        Name = "js",
+                        Description = "The content of the JS",
                         Required = false,
                         Type = "string"
                     }
@@ -147,13 +284,16 @@ namespace Satrabel.OpenContentMcp.Tools
                 {
                     try
                     {
-                        var templateName = arguments["templateName"].ToString();
-                        var templateContent = arguments["templateContent"].ToString();
-                        var schemaJson = arguments.ContainsKey("schemaJson") ? arguments["schemaJson"].ToString() : null;
-                        var optionsJson = arguments.ContainsKey("optionsJson") ? arguments["optionsJson"].ToString() : null;
-                        
-                        var result = CreateTemplate(templateName, templateContent, schemaJson, optionsJson);
-                        
+                        var name = arguments["name"].ToString();
+                        var template = arguments.ContainsKey("template") ? arguments["template"].ToString() : null;
+                        var schema = arguments.ContainsKey("schema") ? arguments["schema"].ToString() : null;
+                        var options = arguments.ContainsKey("options") ? arguments["options"].ToString() : null;
+                        var data = arguments.ContainsKey("data") ? arguments["data"].ToString() : null;
+                        var css = arguments.ContainsKey("css") ? arguments["css"].ToString() : null;
+                        var js = arguments.ContainsKey("js") ? arguments["js"].ToString() : null;
+
+                        var result = SaveTemplate(name, template, schema, options, data, css, js);
+
                         return new CallToolResult
                         {
                             Content = new List<ContentBlock>
@@ -174,7 +314,7 @@ namespace Satrabel.OpenContentMcp.Tools
                             {
                                 new TextContentBlock
                                 {
-                                    Text = $"Error creating template: {ex.Message}"
+                                    Text = $"Error saving template: {ex.Message}"
                                 }
                             }
                         };
@@ -182,119 +322,8 @@ namespace Satrabel.OpenContentMcp.Tools
                 }
             });
 
-            // Register update-opencontent-template tool
-            registry.RegisterTool(new ToolDefinition
-            {
-                Name = "update-opencontent-template",
-                Title = "Update OpenContent Template",
-                Description = "Update an existing OpenContent template",
-                Parameters = new List<ToolParameter>
-                {
-                    new ToolParameter
-                    {
-                        Name = "templatePath",
-                        Description = "The path to the template file",
-                        Required = true,
-                        Type = "string"
-                    },
-                    new ToolParameter
-                    {
-                        Name = "templateContent",
-                        Description = "The new content of the template",
-                        Required = true,
-                        Type = "string"
-                    }
-                },
-                Handler = (arguments) =>
-                {
-                    try
-                    {
-                        var templatePath = arguments["templatePath"].ToString();
-                        var templateContent = arguments["templateContent"].ToString();
-                        
-                        var result = UpdateTemplate(templatePath, templateContent);
-                        
-                        return new CallToolResult
-                        {
-                            Content = new List<ContentBlock>
-                            {
-                                new TextContentBlock
-                                {
-                                    Text = result
-                                }
-                            }
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        return new CallToolResult
-                        {
-                            IsError = true,
-                            Content = new List<ContentBlock>
-                            {
-                                new TextContentBlock
-                                {
-                                    Text = $"Error updating template: {ex.Message}"
-                                }
-                            }
-                        };
-                    }
-                }
-            });
-
-            // Register delete-opencontent-template tool
-            registry.RegisterTool(new ToolDefinition
-            {
-                Name = "delete-opencontent-template",
-                Title = "Delete OpenContent Template",
-                Description = "Delete an OpenContent template",
-                Parameters = new List<ToolParameter>
-                {
-                    new ToolParameter
-                    {
-                        Name = "templatePath",
-                        Description = "The path to the template file",
-                        Required = true,
-                        Type = "string"
-                    }
-                },
-                Handler = (arguments) =>
-                {
-                    try
-                    {
-                        var templatePath = arguments["templatePath"].ToString();
-                        var result = DeleteTemplate(templatePath);
-                        
-                        return new CallToolResult
-                        {
-                            Content = new List<ContentBlock>
-                            {
-                                new TextContentBlock
-                                {
-                                    Text = result
-                                }
-                            }
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        return new CallToolResult
-                        {
-                            IsError = true,
-                            Content = new List<ContentBlock>
-                            {
-                                new TextContentBlock
-                                {
-                                    Text = $"Error deleting template: {ex.Message}"
-                                }
-                            }
-                        };
-                    }
-                }
-            });
         }
-
-        private List<object> ListFolders()
+        private List<string> ListTemplates()
         {
             var portalId = PortalSettings.Current.PortalId;
             var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
@@ -302,58 +331,48 @@ namespace Satrabel.OpenContentMcp.Tools
 
             if (!Directory.Exists(openContentPath))
             {
-                return new List<object>();
+                return new List<string>();
             }
 
-            var templates = new List<object>();
+            var templates = new List<string>();
             var templateDirs = Directory.GetDirectories(openContentPath);
 
             foreach (var dir in templateDirs)
             {
                 var dirInfo = new DirectoryInfo(dir);
-                var templateFiles = Directory.GetFiles(dir, "*.hbs").Concat(Directory.GetFiles(dir, "*.html")).ToList();
+                var templateFiles = Directory.GetFiles(dir, "*.hbs").Concat(Directory.GetFiles(dir, "*.chtml")).ToList();
 
-                foreach (var file in templateFiles)
-                {
-                    var fileInfo = new FileInfo(file);
-                    templates.Add(new
-                    {
-                        Name = Path.GetFileNameWithoutExtension(file),
-                        Path = file.Replace(portalPath, "~"),
-                        FullPath = file,
-                        Category = dirInfo.Name,
-                        Extension = fileInfo.Extension,
-                        Size = fileInfo.Length,
-                        LastModified = fileInfo.LastWriteTime
-                    });
-                }
+                templates.Add(dirInfo.Name);
             }
 
             return templates;
         }
 
-        private object GetFolder(string name)
+        private TemplateInfo GetTemplate(string name)
         {
             var portalId = PortalSettings.Current.PortalId;
             var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
             var fullPath = Path.Combine(portalPath, "OpenContent", "Templates", name);
 
-            if (!File.Exists(fullPath))
-            {
-                throw new FileNotFoundException($"Template not found: {name}");
-            }
-
-            var fileInfo = new FileInfo(fullPath);
-            var content = File.ReadAllText(fullPath);
-
             // Check for associated schema and options files
-            var dataPath = Path.Combine(fullPath, "schema.json");
+            var dataPath = Path.Combine(fullPath, "data.json");
             var schemaPath = Path.Combine(fullPath, "schema.json");
             var optionsPath = Path.Combine(fullPath, "options.json");
+            var templatePath = Path.Combine(fullPath, "template.hbs");
+            var cssPath = Path.Combine(fullPath, "template.css");
+            var jsPath = Path.Combine(fullPath, "template.js");
 
             string schemaContent = null;
             string optionsContent = null;
+            string templateContent = null;
+            string cssContent = null;
+            string jsContent = null;
 
+            string dataContent = null;
+            if (File.Exists(dataPath))
+            {
+                dataContent = File.ReadAllText(dataPath);
+            }
             if (File.Exists(schemaPath))
             {
                 schemaContent = File.ReadAllText(schemaPath);
@@ -363,104 +382,128 @@ namespace Satrabel.OpenContentMcp.Tools
             {
                 optionsContent = File.ReadAllText(optionsPath);
             }
+            if (File.Exists(templatePath))
+            {
+                templateContent = File.ReadAllText(templatePath);
+            }
+            if (File.Exists(cssPath))
+            {
+                cssContent = File.ReadAllText(cssPath);
+            }
+            if (File.Exists(jsPath))
+            {
+                jsContent = File.ReadAllText(jsPath);
+            }
 
-            return new
+            return new TemplateInfo
             {
                 Name = name,
-                FullPath = fullPath,
-                Data = content,
+                //FullPath = fullPath,
+                Data = dataContent,
                 Schema = schemaContent,
                 Options = optionsContent,
+                Template = templateContent,
+                CSS = cssContent,
+                JS = jsContent
             };
         }
 
-        private string CreateTemplate(string templateName, string templateContent, string schemaJson, string optionsJson)
+        private string SaveTemplate(string name, string template, string schema, string options, string data, string css, string js)
         {
             var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
-            var openContentPath = Path.Combine(portalPath, "OpenContent", "Templates", "Custom");
+            var openContentPath = Path.Combine(portalPath, "OpenContent", "Templates", name);
 
             if (!Directory.Exists(openContentPath))
             {
                 Directory.CreateDirectory(openContentPath);
             }
 
-            var templateFileName = $"{templateName}.hbs";
-            var templatePath = Path.Combine(openContentPath, templateFileName);
 
-            if (File.Exists(templatePath))
-            {
-                return $"Error: Template '{templateName}' already exists";
-            }
+            var templatePath = Path.Combine(openContentPath, "template.hbs");
+            var cssPath = Path.Combine(openContentPath, "template.css");
+            var jsPath = Path.Combine(openContentPath, "template.js");
+            var dataPath = Path.Combine(openContentPath, "data.json");
+            var schemaPath = Path.Combine(openContentPath, "schema.json");
+            var optionsPath = Path.Combine(openContentPath, "options.json");
 
-            // Write template file
-            File.WriteAllText(templatePath, templateContent);
-
-            // Write schema file if provided
-            if (!string.IsNullOrEmpty(schemaJson))
-            {
-                var schemaPath = Path.Combine(openContentPath, $"{templateName}.schema.json");
-                File.WriteAllText(schemaPath, schemaJson);
-            }
-
-            // Write options file if provided
-            if (!string.IsNullOrEmpty(optionsJson))
-            {
-                var optionsPath = Path.Combine(openContentPath, $"{templateName}.options.json");
-                File.WriteAllText(optionsPath, optionsJson);
-            }
-
-            return $"Template '{templateName}' created successfully at: {templatePath.Replace(portalPath, "~")}";
+            File.WriteAllText(templatePath, template);
+            File.WriteAllText(cssPath, css);
+            File.WriteAllText(jsPath, js);
+            File.WriteAllText(dataPath, data);
+            File.WriteAllText(schemaPath, schema);
+            File.WriteAllText(optionsPath, options);
+            return $"Template '{name}' saved successfully";
         }
 
-        private string UpdateTemplate(string templatePath, string templateContent)
+        private string DeleteTemplate(string name)
         {
             var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
-            var fullPath = templatePath.StartsWith("~") 
-                ? templatePath.Replace("~", portalPath) 
-                : templatePath;
+            var openContentPath = Path.Combine(portalPath, "OpenContent", "Templates", name);
 
-            if (!File.Exists(fullPath))
+            if (Directory.Exists(openContentPath))
             {
-                return $"Error: Template not found: {templatePath}";
+                Directory.Delete(openContentPath, true);
             }
 
-            File.WriteAllText(fullPath, templateContent);
-
-            return $"Template updated successfully: {templatePath}";
+            return $"Template '{name}' deleted successfully";
         }
-
-        private string DeleteTemplate(string templatePath)
+        private string InitOpenContentModule(int tabId, int moduleId, string templateName)
         {
-            var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
-            var fullPath = templatePath.StartsWith("~") 
-                ? templatePath.Replace("~", portalPath) 
-                : templatePath;
-
-            if (!File.Exists(fullPath))
+            try
             {
-                return $"Error: Template not found: {templatePath}";
+                var portalPath = PortalSettings.Current.HomeDirectoryMapPath;
+                var openContentPath = Path.Combine(portalPath, "OpenContent", "Templates", templateName);
+                if (!Directory.Exists(openContentPath))
+                {
+                    return $"Template '{templateName}' not found";
+                }
+                var template = GetTemplate(templateName);
+                FileUri templateUri = FileUri.FromPath(Path.Combine(openContentPath, "template.hbs"));
+                var module = ModuleController.Instance.GetModule((int)moduleId, tabId, false);
+                if (module == null)
+                {
+                    return $"Module not found.";
+                }
+
+                if (!string.Equals(module.DesktopModule?.ModuleName, "OpenContent", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"Module is not an OpenContent module. Only OpenContent modules are supported.";
+                }
+                var data = template.Data;
+                var templateSet = templateUri.FilePath;
+                ModuleController.Instance.UpdateModuleSetting(moduleId, "template", templateSet);
+                module.ModuleSettings["template"] = templateSet;
+                //ModuleController.Instance.UpdateModule(module);
+                //OpenContentSettings settings = module.OpenContentSettings();
+                OpenContentModuleConfig moduleConfig = OpenContentModuleConfig.Create(module, PortalSettings.Current);
+                IDataSource ds = DataSourceManager.GetDataSource(moduleConfig.Settings.Manifest.DataSource);
+
+                if (moduleConfig.IsListMode())
+                {
+                    var dsContext = OpenContentUtils.CreateDataContext(moduleConfig, PortalSettings.Current.UserInfo.UserID, false);
+                    var dsItems = ds.GetAll(dsContext, null);
+                    ds.Add(dsContext, JObject.Parse(data));
+                    return $"Template '{templateName}' initialized successfully";
+                }
+                else
+                {
+                    var dsContext = OpenContentUtils.CreateDataContext(moduleConfig, PortalSettings.Current.UserInfo.UserID, true);
+                    var dsItem = ds.Get(dsContext, null);
+                    if (dsItem == null)
+                    {
+                        ds.Add(dsContext, JObject.Parse(data));
+                    }
+                    else
+                    {
+                        ds.Update(dsContext, dsItem, JObject.Parse(data));
+                    }
+                    return $"Template '{templateName}' initialized successfully";
+                }
             }
-
-            // Delete the template file
-            File.Delete(fullPath);
-
-            // Delete associated schema and options files if they exist
-            var directory = Path.GetDirectoryName(fullPath);
-            var baseName = Path.GetFileNameWithoutExtension(fullPath);
-            var schemaPath = Path.Combine(directory, $"{baseName}.schema.json");
-            var optionsPath = Path.Combine(directory, $"{baseName}.options.json");
-
-            if (File.Exists(schemaPath))
+            catch (Exception ex)
             {
-                File.Delete(schemaPath);
+                return $"Error initializing template: {ex.Message}";
             }
-
-            if (File.Exists(optionsPath))
-            {
-                File.Delete(optionsPath);
-            }
-
-            return $"Template deleted successfully: {templatePath}";
         }
     }
 }

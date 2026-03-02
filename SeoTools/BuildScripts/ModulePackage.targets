@@ -82,7 +82,9 @@
 	
 
 		<Copy SourceFiles="bin\Release\$(AssemblyName).dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
+		<!--
 		<Copy SourceFiles="bin\Release\AngleSharp.dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
+		-->
 		<Copy SourceFiles="@(PackageManifestFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
 		<Copy SourceFiles="@(PackageTxtFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
 
@@ -107,8 +109,9 @@
 		<Copy SourceFiles="$(MSBuildProjectDirectory)\$(PackageName)_$(Version)_Install.$(Extension)" DestinationFolder="../Install" />
 
 		<Copy SourceFiles="bin\Release\$(AssemblyName).dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
+		<!--
 		<Copy SourceFiles="bin\Release\AngleSharp.dll" DestinationFolder="$(MSBuildProjectDirectory)\Package\bin"/>
-		
+		-->
 		<Copy SourceFiles="@(PackageManifestFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
 		<Copy SourceFiles="@(PackageTxtFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Package" />
 

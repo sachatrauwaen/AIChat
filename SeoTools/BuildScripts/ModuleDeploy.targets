@@ -19,7 +19,9 @@
 	<!-- Copy files into Website's bin folder -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.SeoAI.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\Satrabel.SeoAI.pdb" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+	  <!-- Copy AngleSharp dependency into Website's bin folder 
 	  <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Debug\AngleSharp.dll" DestinationFolder="$(WebsitePath)\bin\" SkipUnchangedFiles="True" />
+	  -->
 	  <!-- Copy files into Website's module folder -->
 	  <ItemGroup>
 		  <DeployInclude Include="**\*.md" Exclude="packages\**;BuildScripts\**" />		  

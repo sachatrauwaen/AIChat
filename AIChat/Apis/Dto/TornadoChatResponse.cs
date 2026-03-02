@@ -20,6 +20,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
         [JsonProperty("toolCall")]
         public TornadoToolCallDto ToolCall { get; set; }
 
+        [JsonProperty("pendingToolCalls")]
+        public List<TornadoToolCallDto> PendingToolCalls { get; set; }
+
         [JsonProperty("totalPrice")]
         public decimal TotalPrice { get; set; }
 

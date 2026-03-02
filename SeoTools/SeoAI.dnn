@@ -14,8 +14,8 @@
       <releaseNotes src="ReleaseNotes.txt"></releaseNotes>
       <azureCompatible>true</azureCompatible>
       <dependencies>
-        <dependency type="CoreVersion">09.03.00</dependency>
-        <dependency type="ManagedPackage" version="00.01.00">DnnMcp</dependency>
+        <dependency type="CoreVersion">10.00.00</dependency>
+        <dependency type="ManagedPackage" version="00.01.00">AIChat</dependency>
       </dependencies>
       <components>
         <component type="ResourceFile">

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace Satrabel.PersonaBar.AIChat.Apis
@@ -19,5 +19,14 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("autoWriteTools")]
         public bool AutoWriteTools { get; set; }
+
+        [JsonProperty("selectedMode")]
+        public string SelectedMode { get; set; }
+
+        [JsonProperty("selectedRule")]
+        public string SelectedRule { get; set; }
+
+        [JsonProperty("debug")]
+        public bool Debug { get; set; }
     }
 }

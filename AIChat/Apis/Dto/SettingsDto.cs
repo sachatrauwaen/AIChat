@@ -43,5 +43,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("autoWriteTools")]
         public bool AutoWriteTools { get; set; }
+
+        [JsonProperty("debug")]
+        public bool Debug { get; set; }
     }
 }

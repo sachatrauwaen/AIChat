@@ -160,7 +160,7 @@ namespace Satrabel.SeoTools.Tools
                 seo.ExternalScriptCount = document.QuerySelectorAll("script[src]").Length;
                 seo.ExternalStylesheetCount = document.QuerySelectorAll("link[rel='stylesheet']").Length;
 
-                return JsonConvert.SerializeObject(seo, Formatting.Indented);
+                return JsonConvert.SerializeObject(seo, Formatting.None);
             }
             catch (Exception ex)
             {
