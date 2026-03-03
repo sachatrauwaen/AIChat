@@ -13,7 +13,7 @@
 
 	
 	<PropertyGroup>
-    <WebsitePath>c:\sacha\dnn\DNN910\</WebsitePath>
+    <WebsitePath>c:\sacha\dnn\testbuild\website\</WebsitePath>
   </PropertyGroup>	
 		
   <Target Name="DeployModule" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -27,14 +27,14 @@
 
 	  <!-- Copy files into Website's module folder -->
     <ItemGroup>
-      <DeployInclude Include="**\*.css" Exclude="packages\**" />
-      <DeployInclude Include="**\*.png" Exclude="packages\**" />
-      <DeployInclude Include="**\*.html" Exclude="packages\**" />
-      <DeployInclude Include="**\*.htm" Exclude="packages\**" />
-      <DeployInclude Include="**\*.resx" Exclude="packages\**" />
-      <DeployInclude Include="**\*.js" Exclude="packages\**;**\_*.js" />
-      <DeployInclude Include="**\images\**" Exclude="packages\**;**\*.cs" />
-      <DeployInclude Include="**\css\**" Exclude="packages\**" />
+      <DeployInclude Include="**\*.css" Exclude="packages\**;ClientSideVite\**" />
+      <DeployInclude Include="**\*.png" Exclude="packages\**;ClientSideVite\**" />
+      <DeployInclude Include="**\*.html" Exclude="packages\**;ClientSideVite\**" />
+      <DeployInclude Include="**\*.htm" Exclude="packages\**;ClientSideVite\**" />
+      <DeployInclude Include="**\*.resx" Exclude="packages\**;ClientSideVite\**" />
+      <DeployInclude Include="**\*.js" Exclude="packages\**;ClientSideVite\**;**\_*.js" />
+      <DeployInclude Include="**\images\**" Exclude="packages\**;ClientSideVite\**;**\*.cs" />
+      <DeployInclude Include="**\css\**" Exclude="packages\**;ClientSideVite\**" />
     </ItemGroup>	
 	<Copy SourceFiles="@(DeployInclude)" DestinationFolder="$(WebsitePath)\DesktopModules/Admin/Dnn.PersonaBar/Modules/Satrabel.AIChat\%(RecursiveDir)" SkipUnchangedFiles="True" />
     

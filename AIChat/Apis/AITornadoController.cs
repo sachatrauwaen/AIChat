@@ -509,6 +509,20 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     ToolCallId = m.ToolCallId
                 }).ToList();
 
+                IEnumerable<DebugMessageDto> debugMessages = null;
+                var debugEnabled = bool.Parse(PortalController.GetPortalSetting(DEBUG_SETTING, PortalId, "false"));
+                if (debugEnabled && conv?.Messages != null)
+                {
+                    debugMessages = conv.Messages.Select(m => new DebugMessageDto
+                    {
+                        Role = m.Role.ToString().ToLowerInvariant(),
+                        Content = m.Content,
+                        ToolCallId = m.ToolCallId,
+                        ToolCalls = m.ToolCalls?.Select(t=>  t.Id).ToList(),
+                        MessageTokens = m.GetMessageTokens(),
+                    }).ToList();
+                }
+
                 return new TornadoChatResponse
                 {
                     Success = true,
@@ -519,7 +533,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     PendingToolCalls = remainingPendingToolCalls,
                     TotalInputTokens = totalInputTokens,
                     TotalOutputTokens = totalOutputTokens,
-                    TotalPrice = CalculatePrice(model, totalInputTokens, totalOutputTokens)
+                    TotalPrice = CalculatePrice(model, totalInputTokens, totalOutputTokens),
+                    DebugMessages = debugMessages
                 };
             }
             catch (Exception ex)
@@ -691,11 +706,38 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             try
             {
                 var apiKey = PortalController.GetPortalSetting(APIKEY_SETTING, PortalId, "");
-                res.Models = ChatModel.AllModels.Select(m=> new ModelDto
+                var popularModelOrder = new[]
                 {
-                    Value = m.Name,
-                    Name = $"{m.Provider.ToString()} - {m.Name}"
-                }).OrderBy(m=> m.Name).ToList();
+                    ChatModel.Anthropic.Claude45.Haiku251001.Name,
+                    ChatModel.Anthropic.Claude46.Opus.Name,
+                    ChatModel.Anthropic.Claude46.Sonnet.Name,
+                    ChatModel.Google.Gemini.GeminiFlashLatest.Name,
+                    ChatModel.Google.Gemini.GeminiProLatest.Name,
+                    ChatModel.OpenAi.Gpt52.V52.Name,
+                    ChatModel.OpenAi.Gpt52.V52Pro.Name,
+                    ChatModel.OpenAi.Gpt5.V5Mini.Name,
+                    ChatModel.Zai.Glm.Glm5.Name,
+                    ChatModel.Zai.Glm.Glm47Flash.Name,
+                };
+
+                var popularityLookup = popularModelOrder
+                    .Select((name, index) => new { name, index })
+                    .ToDictionary(x => x.name, x => x.index);
+
+                res.Models = ChatModel.AllModels
+                    .Select(m => new ModelDto
+                    {
+                        Value = m.Name,
+                        Name = $"{m.Provider.ToString()} - {m.Name}"
+                    })
+                    .OrderBy(m =>
+                    {
+                        return popularityLookup.TryGetValue(m.Value, out var rank)
+                            ? rank
+                            : int.MaxValue;
+                    })
+                    .ThenBy(m => m.Name)
+                    .ToList();
                 res.ApiKey = string.IsNullOrEmpty(apiKey) ? "" : "********";
                 res.MaxTokens = int.Parse(PortalController.GetPortalSetting(MAX_TOKENS_SETTING, PortalId, MAX_TOKENS_DEFAULT.ToString()));
                 res.HistoryMaxTokens = int.Parse(PortalController.GetPortalSetting(HISTORY_MAX_TOKENS_SETTING, PortalId, ChatHistoryPolicy.DefaultMaxContextTokens.ToString()));

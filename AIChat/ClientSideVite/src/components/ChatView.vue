@@ -163,7 +163,8 @@ export default {
       totalPrice: 0,
       totalInputTokens: 0,
       totalOutputTokens: 0,
-      _preferencesLoaded: false
+      _preferencesLoaded: false,
+      debug: false
     };
   },
   watch: {
@@ -202,6 +203,7 @@ export default {
         this.rules = (data && data.rules) ? data.rules : [];
         this.selectedMode = (data && data.selectedMode != null) ? data.selectedMode : "readonly";
         this.selectedRule = (data && data.selectedRule != null) ? data.selectedRule : "";
+        this.debug = !!(data && data.debug);
         this._preferencesLoaded = true;
       } catch (e) {
         this.rules = [];
@@ -264,6 +266,9 @@ export default {
         });
         this.isThinking = false;
         if (res.success) {
+          if (this.debug && res.debugMessages) {
+            console.log("[AIChat Debug] Conversation messages (send)", res.debugMessages);
+          }
           this.conversationId = res.conversationId;
           this.messages = res.messages || [];
           this.toolCall = res.toolCall || null;
@@ -308,6 +313,9 @@ export default {
         });
         this.isThinking = false;
         if (res.success) {
+          if (this.debug && res.debugMessages) {
+            console.log("[AIChat Debug] Conversation messages (tool)", res.debugMessages);
+          }
           this.conversationId = res.conversationId;
           this.messages = res.messages || [];
           this.toolCall = res.toolCall || null;

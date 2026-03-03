@@ -133,7 +133,7 @@
               id="debug"
             />
             <label for="debug" class="ai-settings__checkbox-label">
-              Debug mode
+              Debug mode (Browser console will show detailed messages)
             </label>
           </div>
         </div>
@@ -446,11 +446,12 @@ export default {
 }
 
 .ai-settings__footer {
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    width: 918px;
+    left: 0;    
     margin-top: 24px;    
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding: 12px;
     border-top: 1px solid #e0e0e0;
     display: flex;
     align-items: center;

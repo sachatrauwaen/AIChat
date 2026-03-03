@@ -159,6 +159,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Apis\DebugMessageDto.cs" />
     <Compile Include="Apis\Dto\RuleDto.cs" />
     <Compile Include="Apis\Dto\TornadoDeleteConversationRequest.cs" />
     <Compile Include="Apis\Dto\ChatPreferencesDto.cs" />

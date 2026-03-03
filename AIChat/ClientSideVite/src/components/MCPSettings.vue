@@ -226,7 +226,7 @@
                 </button>
             </div>          
         </div>
-        <div class="mcp-settings__footer" style="z-index: 1000;width: 860px;">
+        <div class="mcp-settings__footer" style="z-index: 1000;">
             
             <div class="mcp-settings__footer-right">
                 <div v-if="message" class="mcp-settings__message">
@@ -626,12 +626,14 @@ export default {
 
 .mcp-settings__footer {
     position: fixed;
+
+    width: 918px;
     bottom: 0;
     left: 0;
     right: 0;
     border-top: 1px solid #e0e0e0;
     background: #ffffff;
-    padding: 8px 24px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
 }

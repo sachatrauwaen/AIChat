@@ -31,6 +31,13 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
 
         [JsonProperty("totalOutputTokens")]
         public int TotalOutputTokens { get; set; }
+
+        /// <summary>
+        /// Optional debug payload: raw conversation messages passed to the LLM.
+        /// Only populated when debug mode is enabled.
+        /// </summary>
+        [JsonProperty("debugMessages")]
+        public IEnumerable<DebugMessageDto> DebugMessages { get; set; }
     }
 }
 
