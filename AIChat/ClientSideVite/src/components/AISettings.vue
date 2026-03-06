@@ -21,7 +21,7 @@
             target="_blank"
             class="ai-settings__link"
           >
-            Get Anthropic API key
+            Get Anthropic API key for example
           </a>
         </div>
         <div class="ai-settings__field ai-settings__field--inline">
@@ -77,6 +77,9 @@
 
       <section class="ai-settings__section">
         <h3 class="ai-settings__section-title">Tools</h3>
+        <p class="ai-settings__section-description">
+          Tools are used to extend the capabilities of the AI. Activate only the tools you need.
+        </p>
         <div class="ai-settings__field">
           <label class="ai-settings__label">Activated tools</label>
           <div
@@ -354,6 +357,31 @@ export default {
     margin: 0 0 12px;
     font-size: 16px;
     font-weight: 600;
+}
+
+.ai-settings__section-description {
+    position: relative;
+    margin: 0 0 14px;
+    padding: 8px 10px 8px 32px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #555;
+    background: #fffdf5;
+    border-radius: 4px;
+    border: 1px solid #ffe0a3;
+}
+
+.ai-settings__section-description::before {
+    content: "Tip";
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #b26a00;
 }
 
 .ai-settings__field {

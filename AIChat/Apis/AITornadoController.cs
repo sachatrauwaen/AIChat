@@ -22,6 +22,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -548,6 +552,381 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             }
         }
 
+        [ValidateAntiForgeryToken]
+        [HttpPost]
+        public HttpResponseMessage ChatStream(TornadoChatRequest request)
+        {
+            SaveChatPreferences(request.Mode, request.Rules);
+
+            var apiKey = GetApiKey();
+            var model = GetModel();
+            var maxTokens = GetMaxTokens();
+            var systemPrompt = GenerateSystemPrompt(request);
+            var conversationsFolder = GetConversationsFolder();
+            var enabledToolNames = PortalController.GetPortalSetting(TOOLS_SETTING, PortalId, "")
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var autoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
+            var autoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
+            var debugEnabled = bool.Parse(PortalController.GetPortalSetting(DEBUG_SETTING, PortalId, "false"));
+
+            TornadoToolsService toolsService = CreateToolService();
+            List<Tool> tools = null;
+            if (request.Mode == "readonly")
+            {
+                tools = toolsService.GetReadOnlyTools().Where(t => enabledToolNames.Contains(t.ResolvedName)).ToList();
+            }
+            else if (request.Mode == "agent")
+            {
+                tools = toolsService.GetAllTools().Where(t => enabledToolNames.Contains(t.ResolvedName)).ToList();
+            }
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+
+            response.Content = new PushStreamContent(async (stream, httpContent, transportContext) =>
+            {
+                using (var writer = new StreamWriter(stream) { AutoFlush = true })
+                {
+                    if (string.IsNullOrEmpty(apiKey))
+                    {
+                        await WriteSseEvent(writer, "error", new { message = "ApiKey missing (goto settings)" });
+                        return;
+                    }
+
+                    try
+                    {
+                        var historyManager = new ChatHistoryManager(conversationsFolder);
+                        ChatConversation chatHistory;
+                        ChatHistoryUsage historyUsage;
+
+                        if (!string.IsNullOrEmpty(request.ConversationId))
+                        {
+                            chatHistory = historyManager.LoadConversation(request.ConversationId) ??
+                                           historyManager.CreateConversation();
+                        }
+                        else
+                        {
+                            chatHistory = historyManager.CreateConversation();
+                        }
+
+                        var historyPolicy = BuildHistoryPolicy();
+                        var contextMessages = historyManager.GetContextMessages(chatHistory.Id, historyPolicy, out historyUsage);
+
+                        var tornadoService = new TornadoChatService(apiKey, Logger, model, maxTokens);
+                        Conversation conv;
+
+                        if (request.RunTool && !string.IsNullOrEmpty(request.ToolName))
+                        {
+                            var existingConversation = GetPendingConversation(chatHistory.Id);
+                            if (existingConversation != null)
+                            {
+                                RemovePendingConversation(chatHistory.Id);
+                                conv = existingConversation;
+                            }
+                            else
+                            {
+                                conv = tornadoService.CreateConversation(systemPrompt, tools);
+                                ReplayHistory(conv, contextMessages);
+                            }
+
+                            var toolCallId = request.ToolCallId ?? request.ToolName;
+
+                            ReplaceToolPlaceholder(conv, toolCallId,
+                                request.ToolApproved
+                                    ? await toolsService.ExecuteToolAsync(request.ToolName, request.ToolArguments)
+                                    : "The user refused this action.",
+                                request.ToolApproved);
+
+                            var toolResultContent = GetToolResultFromConv(conv, toolCallId);
+                            chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
+                            {
+                                Role = MessageRole.Tool,
+                                ToolName = request.ToolName,
+                                ToolArguments = request.ToolArguments,
+                                ToolCallId = toolCallId,
+                                Content = toolResultContent
+                            });
+                            chatHistory.AddMessage(MessageRole.User, $"[Tool Result for {request.ToolName}]: {toolResultContent}");
+
+                            var remaining = request.PendingToolCalls;
+                            if (remaining != null && remaining.Count > 0)
+                            {
+                                SavePendingConversation(chatHistory.Id, conv);
+                                historyManager.SaveConversation(chatHistory.Id);
+
+                                var nextTool = remaining[0];
+                                var restOfQueue = remaining.Count > 1 ? remaining.Skip(1).ToList() : null;
+
+                                var queueMessages = chatHistory.Messages.Select(m => new TornadoMessageDto
+                                {
+                                    Role = m.Role.ToString().ToLowerInvariant(),
+                                    Content = m.Content,
+                                    ToolName = m.ToolName,
+                                    ToolArguments = m.ToolArguments,
+                                    ToolCallId = m.ToolCallId
+                                }).ToList();
+
+                                await WriteSseEvent(writer, "done", new TornadoChatResponse
+                                {
+                                    Success = true,
+                                    Message = string.Empty,
+                                    ConversationId = chatHistory.Id,
+                                    Messages = queueMessages,
+                                    ToolCall = nextTool,
+                                    PendingToolCalls = restOfQueue,
+                                    TotalInputTokens = 0,
+                                    TotalOutputTokens = 0,
+                                    TotalPrice = 0
+                                });
+                                return;
+                            }
+
+                            if (!request.ToolApproved)
+                            {
+                                historyManager.SaveConversation(chatHistory.Id);
+                                var refusedMessages = chatHistory.Messages.Select(m => new TornadoMessageDto
+                                {
+                                    Role = m.Role.ToString().ToLowerInvariant(),
+                                    Content = m.Content,
+                                    ToolName = m.ToolName,
+                                    ToolArguments = m.ToolArguments,
+                                    ToolCallId = m.ToolCallId
+                                }).ToList();
+                                await WriteSseEvent(writer, "done", new TornadoChatResponse
+                                {
+                                    Success = true,
+                                    Message = string.Empty,
+                                    ConversationId = chatHistory.Id,
+                                    Messages = refusedMessages,
+                                    ToolCall = null,
+                                    TotalInputTokens = 0,
+                                    TotalOutputTokens = 0,
+                                    TotalPrice = 0
+                                });
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            conv = tornadoService.CreateConversation(systemPrompt, tools);
+                            ReplayHistory(conv, contextMessages);
+
+                            if (!string.IsNullOrWhiteSpace(request.Message))
+                            {
+                                conv.AppendUserInput(request.Message);
+                                chatHistory.AddMessage(MessageRole.User, request.Message);
+
+                                if (chatHistory.Messages.Count == 1)
+                                {
+                                    var titleText = request.Message.Length > 60
+                                        ? request.Message.Substring(0, 60) + "..."
+                                        : request.Message;
+                                    chatHistory.Title = titleText;
+                                }
+                            }
+                        }
+
+                        int totalInputTokens = 0;
+                        int totalOutputTokens = 0;
+                        TornadoToolCallDto pendingToolCall = null;
+                        List<TornadoToolCallDto> remainingPendingToolCalls = null;
+                        const int maxIterations = 100;
+
+                        for (int iteration = 0; iteration < maxIterations; iteration++)
+                        {
+                            var assistantText = new StringBuilder();
+                            List<FunctionCall> capturedFunctionCalls = null;
+
+                            try
+                            {
+                                await conv.StreamResponseRich(new ChatStreamEventHandler
+                                {
+                                    MessageTokenHandler = (token) =>
+                                    {
+                                        assistantText.Append(token);
+                                        return new ValueTask(WriteSseEvent(writer, "delta", new { text = token }));
+                                    },
+                                    FunctionCallHandler = (calls) =>
+                                    {
+                                        capturedFunctionCalls = calls;
+                                        foreach (var call in calls)
+                                        {
+                                            call.Result = new FunctionResult(call.Name, "resolving...");
+                                        }
+                                        return default(ValueTask);
+                                    }
+                                });
+                            }
+                            catch (Exception apiEx) when (apiEx.Message != null && apiEx.Message.Contains("rate_limit"))
+                            {
+                                const int waitSeconds = 30;
+                                Logger.Warn($"Rate limit hit on iteration {iteration}, waiting {waitSeconds}s: {apiEx.Message}");
+                                await WriteSseEvent(writer, "wait", new
+                                {
+                                    seconds = waitSeconds,
+                                    message = $"Rate limit exceeded. Retrying in {waitSeconds} seconds..."
+                                });
+                                await Task.Delay(waitSeconds * 1000);
+                                continue;
+                            }
+
+                            var usage = conv.MostRecentApiResult?.Usage;
+                            totalInputTokens += usage?.PromptTokens ?? 0;
+                            totalOutputTokens += usage?.CompletionTokens ?? 0;
+
+                            if (capturedFunctionCalls != null && capturedFunctionCalls.Count > 0)
+                            {
+                                var assistantTextStr = assistantText.ToString();
+                                if (!string.IsNullOrWhiteSpace(assistantTextStr))
+                                {
+                                    chatHistory.AddMessage(MessageRole.Assistant, assistantTextStr);
+                                }
+
+                                var autoExecute = new List<FunctionCall>();
+                                var needsApproval = new List<FunctionCall>();
+
+                                foreach (var call in capturedFunctionCalls)
+                                {
+                                    bool shouldAuto = (autoReadonlyTools && toolsService.IsReadOnly(call.Name))
+                                                   || (autoWriteTools && !toolsService.IsReadOnly(call.Name));
+                                    if (shouldAuto)
+                                        autoExecute.Add(call);
+                                    else
+                                        needsApproval.Add(call);
+                                }
+
+                                if (autoExecute.Count > 0)
+                                {
+                                    var autoTasks = autoExecute.Select(async call =>
+                                    {
+                                        var args = ParseToolArguments(call.Arguments);
+                                        var result = await toolsService.ExecuteToolAsync(call.Name, args);
+                                        return new { Call = call, Args = args, Result = result };
+                                    }).ToArray();
+
+                                    var autoResults = await Task.WhenAll(autoTasks);
+
+                                    foreach (var ar in autoResults)
+                                    {
+                                        var toolCallId = ar.Call.ToolCall?.Id ?? ar.Call.Name;
+                                        ReplaceToolPlaceholder(conv, toolCallId, ar.Result, true);
+                                        chatHistory.AddMessage(new Satrabel.AIChat.History.ChatMessage
+                                        {
+                                            Role = MessageRole.Tool,
+                                            ToolName = ar.Call.Name,
+                                            ToolArguments = ar.Args,
+                                            ToolCallId = toolCallId,
+                                            Content = ar.Result
+                                        });
+                                        chatHistory.AddMessage(MessageRole.User,
+                                            $"[Tool Result for {ar.Call.Name}]: {ar.Result}");
+
+                                        await WriteSseEvent(writer, "tool_auto", new { toolName = ar.Call.Name, result = ar.Result });
+                                    }
+                                }
+
+                                if (needsApproval.Count > 0)
+                                {
+                                    foreach (var call in needsApproval)
+                                    {
+                                        var toolCallId = call.ToolCall?.Id ?? call.Name;
+                                        ReplaceToolPlaceholder(conv, toolCallId, "Pending user approval.", false);
+                                    }
+
+                                    var first = needsApproval[0];
+                                    pendingToolCall = new TornadoToolCallDto
+                                    {
+                                        Id = first.ToolCall?.Id ?? first.Name,
+                                        Name = first.Name,
+                                        Arguments = ParseToolArguments(first.Arguments),
+                                        ReadOnly = toolsService.IsReadOnly(first.Name),
+                                        Description = first.Arguments
+                                    };
+
+                                    if (needsApproval.Count > 1)
+                                    {
+                                        remainingPendingToolCalls = needsApproval.Skip(1).Select(call => new TornadoToolCallDto
+                                        {
+                                            Id = call.ToolCall?.Id ?? call.Name,
+                                            Name = call.Name,
+                                            Arguments = ParseToolArguments(call.Arguments),
+                                            ReadOnly = toolsService.IsReadOnly(call.Name),
+                                            Description = call.Arguments
+                                        }).ToList();
+                                    }
+
+                                    SavePendingConversation(chatHistory.Id, conv);
+                                    break;
+                                }
+
+                                continue;
+                            }
+                            else
+                            {
+                                var text = assistantText.ToString();
+                                chatHistory.AddMessage(MessageRole.Assistant, text);
+                                break;
+                            }
+                        }
+
+                        historyManager.SaveConversation(chatHistory.Id);
+
+                        if (historyUsage != null)
+                        {
+                            Logger.Info(
+                                $"AIChat history usage for conversation {chatHistory.Id}: " +
+                                $"kept {historyUsage.KeptMessages}/{historyUsage.TotalMessages} messages, " +
+                                $"~{historyUsage.KeptApproxTokens}/{historyUsage.TotalApproxTokens} tokens, " +
+                                $"tool messages {historyUsage.KeptToolMessages}/{historyUsage.TotalToolMessages}.");
+                        }
+
+                        var messages = chatHistory.Messages.Select(m => new TornadoMessageDto
+                        {
+                            Role = m.Role.ToString().ToLowerInvariant(),
+                            Content = m.Content,
+                            ToolName = m.ToolName,
+                            ToolArguments = m.ToolArguments,
+                            ToolCallId = m.ToolCallId
+                        }).ToList();
+
+                        IEnumerable<DebugMessageDto> debugMessages = null;
+                        if (debugEnabled && conv?.Messages != null)
+                        {
+                            debugMessages = conv.Messages.Select(m => new DebugMessageDto
+                            {
+                                Role = m.Role.ToString().ToLowerInvariant(),
+                                Content = m.Content,
+                                ToolCallId = m.ToolCallId,
+                                ToolCalls = m.ToolCalls?.Select(t => t.Id).ToList(),
+                                MessageTokens = m.GetMessageTokens(),
+                            }).ToList();
+                        }
+
+                        await WriteSseEvent(writer, "done", new TornadoChatResponse
+                        {
+                            Success = true,
+                            Message = string.Empty,
+                            ConversationId = chatHistory.Id,
+                            Messages = messages,
+                            ToolCall = pendingToolCall,
+                            PendingToolCalls = remainingPendingToolCalls,
+                            TotalInputTokens = totalInputTokens,
+                            TotalOutputTokens = totalOutputTokens,
+                            TotalPrice = CalculatePrice(model, totalInputTokens, totalOutputTokens),
+                            DebugMessages = debugMessages
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Error in AITornadoController.ChatStream", ex);
+                        await WriteSseEvent(writer, "error", new { message = $"Error: {ex.Message}" });
+                    }
+                }
+            }, new MediaTypeHeaderValue("text/event-stream"));
+
+            return response;
+        }
+
         private TornadoToolsService CreateToolService()
         {
             ModuleInitializer.Initialize(_mcpRegistry, _dependencyProvider);
@@ -611,6 +990,12 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     return msg.Content ?? string.Empty;
             }
             return string.Empty;
+        }
+
+        private static async Task WriteSseEvent(StreamWriter writer, string eventType, object data)
+        {
+            await writer.WriteAsync($"event: {eventType}\ndata: {JsonConvert.SerializeObject(data)}\n\n");
+            await writer.FlushAsync();
         }
 
         private Dictionary<string, object> ParseToolArguments(string argsJson)
@@ -752,7 +1137,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 {
                     Name = t.ResolvedName,
                     Description = t.ResolvedDescription,
-                    Active = tools.Contains(t.ResolvedName) || string.IsNullOrEmpty(GetApiKey()), // if no API key, all tools are active
+                    Active = tools.Contains(t.ResolvedName),
                 }).OrderBy(t=> t.Name).ToList();
 
                 var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";

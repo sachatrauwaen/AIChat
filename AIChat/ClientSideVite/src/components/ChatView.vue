@@ -31,7 +31,7 @@
     </aside>
     <main class="chat-main">
       <div class="messages" ref="messagesEl">
-        <div v-if="!filteredMessages.length" class="new-chat-intro">
+        <div v-if="!filteredMessages.length && !streamingText" class="new-chat-intro">
           <h1 class="chat-intro-title">How can I help you today?</h1>
           <h3 class="chat-intro-subtitle">I am your DNN AI assistant.</h3>
           <div class="new-chat-buttons">
@@ -80,6 +80,22 @@
               <div class="content" v-html="renderMarkdown(m.content)"></div>
             </template>
           </div>
+          <div v-if="isThinking && !streamingText" class="message assistant">
+            <div class="role-label">assistant</div>
+            <div v-if="waitMessage" class="content wait-indicator">{{ waitMessage }}</div>
+            <div v-else class="content thinking-indicator">
+              <span class="thinking-letter" style="animation-delay: 0s">D</span>
+              <span class="thinking-letter" style="animation-delay: 0.15s">N</span>
+              <span class="thinking-letter" style="animation-delay: 0.3s">N</span>
+              <span class="thinking-dot" style="animation-delay: 0.5s">.</span>
+              <span class="thinking-dot" style="animation-delay: 0.65s">.</span>
+              <span class="thinking-dot" style="animation-delay: 0.8s">.</span>
+            </div>
+          </div>
+          <div v-if="streamingText" class="message assistant">
+            <div class="role-label">assistant</div>
+            <div class="content" v-html="renderMarkdown(streamingText)"></div>
+          </div>
         </div>
       </div>
 
@@ -124,8 +140,11 @@
             <option value="readonly">Agent (Read Only)</option>
             <option value="agent">Agent (Read/Write)</option>
           </select>
-          <button class="btn primary" :disabled="isThinking || !userInput || !!toolCall" @click="send">
-            {{ isThinking ? "Thinking..." : "Send" }}
+          <button v-if="isThinking" class="btn stop-btn" @click="stopStreaming">
+            Stop
+          </button>
+          <button v-else class="btn primary" :disabled="!userInput || !!toolCall" @click="send">
+            Send
           </button>
         </div>
         <div v-if="error" class="error">{{ error }}</div>
@@ -137,7 +156,7 @@
 <script>
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import { tornadoChat, getInfo, getConversations, loadConversation, deleteConversation, saveChatPreferences } from "../api/aiTornadoService";
+import { tornadoChat, tornadoChatStream, getInfo, getConversations, loadConversation, deleteConversation, saveChatPreferences } from "../api/aiTornadoService";
 
 export default {
   computed: {
@@ -164,7 +183,11 @@ export default {
       totalInputTokens: 0,
       totalOutputTokens: 0,
       _preferencesLoaded: false,
-      debug: false
+      debug: false,
+      streamingText: "",
+      waitMessage: "",
+      _abortController: null,
+      _waitTimer: null
     };
   },
   watch: {
@@ -239,6 +262,7 @@ export default {
       }
     },
     newConversation() {
+      this.stopStreaming();
       this.conversationId = null;
       this.messages = [];
       this.userInput = "";
@@ -248,44 +272,116 @@ export default {
       this.totalPrice = 0;
       this.totalInputTokens = 0;
       this.totalOutputTokens = 0;
+      this.streamingText = "";
+    },
+    stopStreaming() {
+      if (this._abortController) {
+        this._abortController.abort();
+        this._abortController = null;
+      }
+      this.clearWaitTimer();
+      this.commitStreamingText();
+      this.isThinking = false;
+    },
+    commitStreamingText() {
+      if (this.streamingText) {
+        this.messages.push({ role: "assistant", content: this.streamingText });
+        this.streamingText = "";
+      }
+    },
+    clearWaitTimer() {
+      if (this._waitTimer) {
+        clearInterval(this._waitTimer);
+        this._waitTimer = null;
+      }
+      this.waitMessage = "";
+    },
+    startWaitCountdown(seconds) {
+      this.clearWaitTimer();
+      let remaining = seconds;
+      this.waitMessage = `Rate limit exceeded. Retrying in ${remaining}s...`;
+      this._waitTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          this.clearWaitTimer();
+        } else {
+          this.waitMessage = `Rate limit exceeded. Retrying in ${remaining}s...`;
+        }
+      }, 1000);
     },
     async send() {
       if (!this.userInput || this.toolCall) return;
       this.isThinking = true;
       this.error = "";
+      this.streamingText = "";
+
+      const sentMessage = this.userInput;
+      this.messages.push({ role: "user", content: sentMessage });
+      this.userInput = "";
+      this.scrollToBottom();
+
+      this._abortController = new AbortController();
       try {
-        const res = await tornadoChat({
+        await tornadoChatStream({
           conversationId: this.conversationId,
-          message: this.userInput,
+          message: sentMessage,
           runTool: false,
           toolCallId: null,
           toolName: null,
           toolArguments: null,
           mode: this.selectedMode,
           rules: this.selectedRule || ""
-        });
-        this.isThinking = false;
-        if (res.success) {
-          if (this.debug && res.debugMessages) {
-            console.log("[AIChat Debug] Conversation messages (send)", res.debugMessages);
+        }, {
+          signal: this._abortController.signal,
+          onToken: (text) => {
+            this.clearWaitTimer();
+            this.streamingText += text;
+            this.scrollToBottom();
+          },
+          onAutoTool: (data) => {
+            this.clearWaitTimer();
+            this.commitStreamingText();
+            this.messages.push({ role: "tool", toolName: data.toolName, content: data.result });
+            this.scrollToBottom();
+          },
+          onWait: (data) => {
+            this.startWaitCountdown(data.seconds || 30);
+          },
+          onDone: (res) => {
+            this.clearWaitTimer();
+            this.streamingText = "";
+            if (res.success) {
+              if (this.debug && res.debugMessages) {
+                console.log("[AIChat Debug] Conversation messages (send)", res.debugMessages);
+              }
+              this.conversationId = res.conversationId;
+              this.messages = res.messages || [];
+              this.toolCall = res.toolCall || null;
+              this.pendingToolCalls = res.pendingToolCalls || [];
+              this.totalPrice = res.totalPrice || 0;
+              this.totalInputTokens = res.totalInputTokens || 0;
+              this.totalOutputTokens = res.totalOutputTokens || 0;
+              this.scrollToBottom();
+            } else {
+              this.error = res.message || "Request failed.";
+            }
+          },
+          onError: (msg) => {
+            this.clearWaitTimer();
+            this.streamingText = "";
+            this.error = msg || "Request failed.";
           }
-          this.conversationId = res.conversationId;
-          this.messages = res.messages || [];
-          this.toolCall = res.toolCall || null;
-          this.pendingToolCalls = res.pendingToolCalls || [];
-          this.totalPrice = res.totalPrice || 0;
-          this.totalInputTokens = res.totalInputTokens || 0;
-          this.totalOutputTokens = res.totalOutputTokens || 0;
-          this.userInput = "";
-          this.scrollToBottom();
-          await this.fetchConversations();
-        } else {
-          this.error = res.message || "Request failed.";
-        }
+        });
       } catch (e) {
-        this.isThinking = false;
+        if (e.name === "AbortError") return;
+        this.clearWaitTimer();
+        this.streamingText = "";
         this.error = e.message || "Request failed.";
+      } finally {
+        this._abortController = null;
       }
+      this.isThinking = false;
+      await this.fetchConversations();
     },
     async runTool() {
       if (!this.toolCall) return;
@@ -298,8 +394,11 @@ export default {
     async respondToTool(approved) {
       this.isThinking = true;
       this.error = "";
+      this.streamingText = "";
+
+      this._abortController = new AbortController();
       try {
-        const res = await tornadoChat({
+        await tornadoChatStream({
           conversationId: this.conversationId,
           message: null,
           runTool: true,
@@ -310,27 +409,56 @@ export default {
           pendingToolCalls: this.pendingToolCalls.length > 0 ? this.pendingToolCalls : null,
           mode: this.selectedMode,
           rules: this.selectedRule || ""
-        });
-        this.isThinking = false;
-        if (res.success) {
-          if (this.debug && res.debugMessages) {
-            console.log("[AIChat Debug] Conversation messages (tool)", res.debugMessages);
+        }, {
+          signal: this._abortController.signal,
+          onToken: (text) => {
+            this.clearWaitTimer();
+            this.streamingText += text;
+            this.scrollToBottom();
+          },
+          onAutoTool: (data) => {
+            this.clearWaitTimer();
+            this.commitStreamingText();
+            this.messages.push({ role: "tool", toolName: data.toolName, content: data.result });
+            this.scrollToBottom();
+          },
+          onWait: (data) => {
+            this.startWaitCountdown(data.seconds || 30);
+          },
+          onDone: (res) => {
+            this.clearWaitTimer();
+            this.streamingText = "";
+            if (res.success) {
+              if (this.debug && res.debugMessages) {
+                console.log("[AIChat Debug] Conversation messages (tool)", res.debugMessages);
+              }
+              this.conversationId = res.conversationId;
+              this.messages = res.messages || [];
+              this.toolCall = res.toolCall || null;
+              this.pendingToolCalls = res.pendingToolCalls || [];
+              this.totalPrice = res.totalPrice || 0;
+              this.totalInputTokens = res.totalInputTokens || 0;
+              this.totalOutputTokens = res.totalOutputTokens || 0;
+              this.scrollToBottom();
+            } else {
+              this.error = res.message || "Tool operation failed.";
+            }
+          },
+          onError: (msg) => {
+            this.clearWaitTimer();
+            this.streamingText = "";
+            this.error = msg || "Tool operation failed.";
           }
-          this.conversationId = res.conversationId;
-          this.messages = res.messages || [];
-          this.toolCall = res.toolCall || null;
-          this.pendingToolCalls = res.pendingToolCalls || [];
-          this.totalPrice = res.totalPrice || 0;
-          this.totalInputTokens = res.totalInputTokens || 0;
-          this.totalOutputTokens = res.totalOutputTokens || 0;
-          this.scrollToBottom();
-        } else {
-          this.error = res.message || "Tool operation failed.";
-        }
+        });
       } catch (e) {
-        this.isThinking = false;
+        if (e.name === "AbortError") return;
+        this.clearWaitTimer();
+        this.streamingText = "";
         this.error = e.message || "Tool operation failed.";
+      } finally {
+        this._abortController = null;
       }
+      this.isThinking = false;
     },
     openSettings() {
       this.$emit("open-settings");
@@ -520,13 +648,23 @@ export default {
 }
 
 .message.assistant .content {
-  background: #f5f5f5;
+  background: #f5f5f5;  
 }
 
 .content {
   padding: 8px 10px;
   border-radius: 4px;
   line-height: 1.5;
+}
+
+.content :deep(ol) {
+  list-style-type: decimal;
+  padding-left: 20px;
+}
+
+.content :deep(ul) {
+  list-style-type: disc;
+  padding-left: 20px;
 }
 
 .content :deep(pre) {
@@ -735,6 +873,12 @@ export default {
   color: #fff;
 }
 
+.btn.stop-btn {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}
+
 .btn:disabled {
   opacity: 0.6;
   cursor: default;
@@ -743,5 +887,52 @@ export default {
 .error {
   color: #b71c1c;
   font-size: 12px;
+}
+
+.wait-indicator {
+  color: #e65100;
+  font-size: 13px;
+  font-weight: 500;
+  animation: waitPulse 2s ease-in-out infinite;
+}
+
+@keyframes waitPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.thinking-indicator {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #1976d2;
+  user-select: none;
+}
+
+.thinking-letter {
+  display: inline-block;
+  animation: thinkingBounce 1.2s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+.thinking-dot {
+  display: inline-block;
+  animation: thinkingBounce 1.2s ease-in-out infinite;
+  opacity: 0.3;
+  font-size: 22px;
+  line-height: 0.5;
+}
+
+@keyframes thinkingBounce {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
 }
 </style>
