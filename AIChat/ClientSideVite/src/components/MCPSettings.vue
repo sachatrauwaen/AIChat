@@ -143,7 +143,9 @@
                         <div class="mcp-settings__tab-content">
                             <!-- Goose -->
                             <div v-show="activeTab === 'goose'" class="mcp-settings__tab-pane" role="tabpanel">
-                                                             
+                                <p class="mcp-settings__text" style="margin-bottom: 12px;">
+                                    <a href="https://block.github.io/goose/docs/getting-started/installation" target="_blank" rel="noopener noreferrer" class="mcp-settings__tip-link">How Install Goose</a>
+                                </p>
                                 <div class="mcp-settings__field mcp-settings__field--full-width">
                                     <a 
                                         :href="gooseExtensionUrl" 
@@ -152,7 +154,7 @@
                                     </a>
                                     <p></p>
                                     <p class="mcp-settings__text" style="margin-top: 12px;">
-                                        Then add the authorization header to the Goose extension
+                                        Then add the authorization header to the extension in Goose
                                     </p>
                                     <div class="mcp-settings__field">
                                         <label class="mcp-settings__label">Header name</label>
