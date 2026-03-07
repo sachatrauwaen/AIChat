@@ -6,11 +6,12 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 
 **MCP server** allows clients such as [Goose](https://block.github.io/goose/), Cursor, GitHub Copilot, and Claude Desktop to connect to your DNN portal and use the same tools (pages, modules, files, Open Content, etc.) with Bearer token authentication.
 
-**Beta version. Make a backup before use.**
+**Use with caution . Ai can make changes to your DNN content.**
 
 ---
 
-<img width="467" height="230" alt="image" src="https://github.com/user-attachments/assets/be0346a9-12fc-47f0-b318-4aa356979bf5" />
+<img width="697" height="621" alt="image" src="https://github.com/user-attachments/assets/88e3ee4a-fc16-48af-b2d3-851718fa37c8" />
+
 
 
 
@@ -38,9 +39,13 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 
 **AI Settings** (PersonaBar → AI Assistant): model, API key for the chosen provider, max tokens, history limits, and which tools are active for the in-portal chat.
 
+<img width="697" height="623" alt="image" src="https://github.com/user-attachments/assets/e252254b-65d1-42a4-b5e2-b5c7a4a31ad7" />
+
+
 **MCP Settings** (PersonaBar → MCP): API key (generate/copy), validity delay, active tools for MCP, custom rules/prompts, and client-specific configuration (Goose, Cursor, Copilot, Claude Desktop).
 
-<img width="372" height="460" alt="image" src="https://github.com/user-attachments/assets/95c2b4ad-ea0a-486b-a991-e5e8588bee36" />
+<img width="693" height="623" alt="image" src="https://github.com/user-attachments/assets/a0f2d4d1-6d89-4603-adf4-cda984afc6ad" />
+
 
 ---
 # Documentation
