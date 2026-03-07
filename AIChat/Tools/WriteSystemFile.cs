@@ -26,6 +26,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "write-system-file",
                 Title = "Write System File",
                 Description = "Write to a portal system file",
+                Category = "System",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

@@ -19,6 +19,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-folders",
                 Title = "Get Folders",
                 Description = "Get list of folders of website",
+                Category = "Files",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

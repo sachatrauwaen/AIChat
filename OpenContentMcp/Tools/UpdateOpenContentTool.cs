@@ -21,6 +21,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "update-opencontent-items",
                 Title = "Update OpenContent Items",
                 Description = "Update content of OpenContent Module",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

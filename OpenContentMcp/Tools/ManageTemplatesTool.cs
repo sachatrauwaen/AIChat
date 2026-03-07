@@ -26,6 +26,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "init-opencontent-module",
                 Title = "Init OpenContent Module",
                 Description = "Init the OpenContent module",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>(){
                     new ToolParameter
                     {
@@ -75,6 +76,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "add-opencontent-module",
                 Title = "Add OpenContent Module",
                 Description = "Add the OpenContent module",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>(){
                     new ToolParameter
                     {
@@ -134,6 +136,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "list-opencontent-templates",
                 Title = "List OpenContent templates",
                 Description = "List all available OpenContent templates in the portal",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>(),
                 ReadOnly = true,
                 Handler = (arguments) =>
@@ -176,6 +179,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "get-opencontent-template",
                 Title = "Get OpenContent Template",
                 Description = "Get details of a specific OpenContent Template",
+                Category = "Open Content",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {
@@ -228,6 +232,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "save-opencontent-template",
                 Title = "Save OpenContent Template",
                 Description = "Save a new OpenContent template",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

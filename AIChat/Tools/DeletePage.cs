@@ -21,6 +21,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "delete-page",
                 Title = "Delete Page",
                 Description = "Delete an existing page from DNN portal",
+                Category = "Pages",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

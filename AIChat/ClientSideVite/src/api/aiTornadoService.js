@@ -53,7 +53,7 @@ function getServiceBaseUrl() {
   return sf.getServiceRoot() + "AITornado/";
 }
 
-export async function tornadoChatStream(payload, { onToken, onToolCall, onAutoTool, onDone, onError, onWait, signal }) {
+export async function tornadoChatStream(payload, { onToken, onToolCall, onToolStart, onAutoTool, onDone, onError, onWait, signal }) {
   let url;
   try {
     url = getServiceBaseUrl() + "ChatStream";
@@ -103,7 +103,10 @@ export async function tornadoChatStream(payload, { onToken, onToolCall, onAutoTo
           case "delta":
             if (onToken) onToken(data.text);
             break;
-          case "tool_auto":
+          case "tool_start":
+            if (onToolStart) onToolStart(data);
+            break;
+        case "tool_auto":
             if (onAutoTool) onAutoTool(data);
             break;
           case "tool_call":

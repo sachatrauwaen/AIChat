@@ -26,6 +26,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "read-system-file",
                 Title = "Read System File",
                 Description = "Read content of a portal system file",
+                Category = "System",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

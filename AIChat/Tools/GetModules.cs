@@ -26,6 +26,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-modules",
                 Title = "Get Modules",
                 Description = "Get list of modules of page",
+                Category = "Modules",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

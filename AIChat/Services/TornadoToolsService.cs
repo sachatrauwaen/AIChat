@@ -76,6 +76,19 @@ namespace Satrabel.AIChat.Services
 
         #region Tool definitions
 
+        public Dnn.Mcp.WebApi.Models.ToolDefinition? GetToolDefinition(string toolName)
+        {
+            return _mcpRegistry.GetTool(toolName);
+        }
+        public List<Dnn.Mcp.WebApi.Models.ToolDefinition> GetAllToolDefinitions()
+        {
+            return _mcpRegistry.GetAllTools().ToList();
+        }
+        public bool ToolExists(string toolName)
+        {
+            return _mcpRegistry.ToolExists(toolName);
+        }
+
         private List<Tool> BuildTools(bool readOnly)
         {
             return _mcpRegistry.GetAllTools().Where(t => t.ReadOnly == readOnly).Select(t =>

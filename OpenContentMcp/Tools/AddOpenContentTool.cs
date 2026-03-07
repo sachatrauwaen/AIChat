@@ -25,6 +25,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "add-opencontent-item",
                 Title = "Add OpenContent Item",
                 Description = "Add item to OpenContent Module",
+                Category = "Open Content",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

@@ -26,6 +26,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-system-files",
                 Title = "Get System Files",
                 Description = "Get list of files from a specific portal system folder",
+                Category = "System",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

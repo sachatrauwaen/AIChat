@@ -8,6 +8,18 @@
       <section class="ai-settings__section">
         <h3 class="ai-settings__section-title">API</h3>
         <div class="ai-settings__field">
+          <label for="model" class="ai-settings__label">Model</label>
+          <select
+            id="model"
+            class="ai-settings__input"
+            v-model="model"
+          >
+            <option v-for="model in models" :key="model.value" :value="model.value">
+              {{ model.name }}
+            </option>
+          </select>
+        </div>
+        <div class="ai-settings__field">
           <label for="apiKey" class="ai-settings__label">API Key</label>
           <input
             id="apiKey"
@@ -61,18 +73,7 @@
             v-model="historyMaxTurns"
           />
         </div>
-        <div class="ai-settings__field">
-          <label for="model" class="ai-settings__label">Model</label>
-          <select
-            id="model"
-            class="ai-settings__input"
-            v-model="model"
-          >
-            <option v-for="model in models" :key="model.value" :value="model.value">
-              {{ model.name }}
-            </option>
-          </select>
-        </div>
+        
       </section>
 
       <section class="ai-settings__section">
@@ -82,22 +83,45 @@
         </p>
         <div class="ai-settings__field">
           <label class="ai-settings__label">Activated tools</label>
-          <div
-            v-for="tool in tools"
-            :key="tool.name"
-            class="ai-settings__checkbox-row"
-          >
-            <input
-              type="checkbox"
-              class="ai-settings__checkbox"
-              v-model="tool.active"
-              :id="tool.name"
-            />
-            <label :for="tool.name" class="ai-settings__checkbox-label">
-              <span class="ai-settings__checkbox-name">{{ tool.name }}</span>
-              <span class="ai-settings__checkbox-description">{{ tool.description }}</span>
-            </label>
-          </div>
+          <template v-for="(categoryTools, category) in toolsByCategory" :key="category">
+            <div class="ai-settings__tool-category" v-if="categoryTools.length">
+              <div class="ai-settings__tool-category-header">
+                <h4 class="ai-settings__tool-category-title">{{ category || 'Other' }}</h4>
+                <div class="ai-settings__tool-category-actions">
+                  <button
+                    type="button"
+                    class="ai-settings__category-btn"
+                    @click="selectAllInCategory(categoryTools)"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    class="ai-settings__category-btn"
+                    @click="deselectAllInCategory(categoryTools)"
+                  >
+                    Deselect all
+                  </button>
+                </div>
+              </div>
+              <div
+                v-for="tool in categoryTools"
+                :key="tool.name"
+                class="ai-settings__checkbox-row"
+              >
+                <input
+                  type="checkbox"
+                  class="ai-settings__checkbox"
+                  v-model="tool.active"
+                  :id="tool.name"
+                />
+                <label :for="tool.name" class="ai-settings__checkbox-label">
+                  <span class="ai-settings__checkbox-name">{{ tool.name }}</span>
+                  <span class="ai-settings__checkbox-description">{{ tool.description }}</span>
+                </label>
+              </div>
+            </div>
+          </template>
         </div>
 
         <div class="ai-settings__field">
@@ -253,6 +277,24 @@ export default {
            debug: false
         };
     },
+    computed: {
+        toolsByCategory() {
+            const groups = {};
+            for (const tool of this.tools || []) {
+                const cat = (tool.category && String(tool.category).trim()) || '';
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(tool);
+            }
+            const ordered = {};
+            const keys = Object.keys(groups).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b);
+            });
+            keys.forEach(k => { ordered[k] = groups[k]; });
+            return ordered;
+        }
+    },
     methods: {
         addRule() {
             this.rules.push({name: '', rule: ''});
@@ -309,6 +351,12 @@ export default {
         },
         cancel(){
             this.$emit('close');
+        },
+        selectAllInCategory(categoryTools) {
+            categoryTools.forEach(t => { t.active = true; });
+        },
+        deselectAllInCategory(categoryTools) {
+            categoryTools.forEach(t => { t.active = false; });
         },
         errorCallback(error) {
             this.isThinking = false;
@@ -436,6 +484,50 @@ export default {
     align-items: flex-start;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.ai-settings__tool-category {
+    margin-bottom: 16px;
+}
+
+.ai-settings__tool-category:last-child {
+    margin-bottom: 0;
+}
+
+.ai-settings__tool-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ai-settings__tool-category-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+}
+
+.ai-settings__tool-category-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.ai-settings__category-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+    cursor: pointer;
+    color: #555;
+}
+
+.ai-settings__category-btn:hover {
+    background: #e8e8e8;
+    color: #333;
 }
 
 .ai-settings__checkbox {

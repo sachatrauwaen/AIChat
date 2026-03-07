@@ -24,6 +24,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-html",
                 Title = "Get HTML Module Content",
                 Description = "Get the HTML content from a DNN HTML module",
+                Category = "Modules",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

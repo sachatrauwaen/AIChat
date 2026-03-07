@@ -12,5 +12,8 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
 
         [JsonProperty("description")]
         public string Description { get; set; }
+
+        [JsonProperty("category")]
+        public string Category { get; set; }
     }
 }

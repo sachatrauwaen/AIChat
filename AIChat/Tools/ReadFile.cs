@@ -19,6 +19,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "read-file",
                 Title = "Read File",
                 Description = "Read content of a file from a specified path",
+                Category = "Files",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

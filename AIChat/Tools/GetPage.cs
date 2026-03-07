@@ -21,6 +21,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-page",
                 Title = "Get Page",
                 Description = "Get details of an existing page from DNN portal",
+                Category = "Pages",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

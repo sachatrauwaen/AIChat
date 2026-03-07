@@ -21,6 +21,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "update-page",
                 Title = "Update Page",
                 Description = "Update an existing page in DNN portal",
+                Category = "Pages",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

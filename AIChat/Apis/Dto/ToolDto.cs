@@ -12,5 +12,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
         [JsonProperty("description")]
         public string Description { get; set; }
+
+        [JsonProperty("category")]
+        public string Category { get; set; }
     }
 }

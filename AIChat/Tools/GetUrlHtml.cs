@@ -18,6 +18,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-url-html",
                 Title = "Get HTML of an URL",
                 Description = "Retrieves the HTML content from a specified URL",
+                Category = "Web",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

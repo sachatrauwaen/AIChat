@@ -797,6 +797,11 @@ namespace Satrabel.PersonaBar.AIChat.Apis
 
                                 if (autoExecute.Count > 0)
                                 {
+                                    foreach (var call in autoExecute)
+                                    {
+                                        await WriteSseEvent(writer, "tool_start", new { toolName = call.Name, arguments = call.Arguments });
+                                    }
+
                                     var autoTasks = autoExecute.Select(async call =>
                                     {
                                         var args = ParseToolArguments(call.Arguments);
@@ -1137,6 +1142,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                 {
                     Name = t.ResolvedName,
                     Description = t.ResolvedDescription,
+                    Category = toolsService.GetToolDefinition(t.ResolvedName)?.Category,
                     Active = tools.Contains(t.ResolvedName),
                 }).OrderBy(t=> t.Name).ToList();
 

@@ -22,6 +22,7 @@ namespace Satrabel.SeoTools.Tools
                 Name = "get-url-seo",
                 Title = "Get SEO Information of an URL",
                 Description = "Retrieves and parses the HTML of a URL and extracts SEO-relevant information including meta tags, headings, Open Graph, Twitter Card, structured data, links, and more",
+                Category = "Web",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

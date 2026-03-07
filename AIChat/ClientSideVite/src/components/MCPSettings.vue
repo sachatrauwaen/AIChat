@@ -76,7 +76,7 @@
                 
                 <div class="mcp-settings__config" v-if="apiKey && showMcpConfig">
                     <h5 class="mcp-settings__section-title">MCP Server Configuration</h5>
-                    <p class="mcp-settings__text">Use the following configuration in your MCP client (e.g., Claude Desktop, Cursor, etc.):</p>
+                    <p class="mcp-settings__tip">For beginners start with <a href="https://block.github.io/goose/" target="_blank" rel="noopener noreferrer" class="mcp-settings__tip-link">Goose</a>.</p>
                     
                     <div class="mcp-settings__field">
                         <label class="mcp-settings__label">Server URL:</label>
@@ -103,11 +103,11 @@
                         <ul class="mcp-settings__tabs" role="tablist">
                             <li class="mcp-settings__tab-item" role="presentation">
                                 <button 
-                                    :class="['mcp-settings__tab-link', { 'mcp-settings__tab-link--active': activeTab === 'claude' }]"
-                                    @click="activeTab = 'claude'"
+                                    :class="['mcp-settings__tab-link', { 'mcp-settings__tab-link--active': activeTab === 'goose' }]"
+                                    @click="activeTab = 'goose'"
                                     type="button" 
                                     role="tab">
-                                    Claude Desktop
+                                    Goose
                                 </button>
                             </li>
                             <li class="mcp-settings__tab-item" role="presentation">
@@ -128,28 +128,68 @@
                                     GitHub Copilot
                                 </button>
                             </li>
+                            <li class="mcp-settings__tab-item" role="presentation">
+                                <button 
+                                    :class="['mcp-settings__tab-link', { 'mcp-settings__tab-link--active': activeTab === 'claude' }]"
+                                    @click="activeTab = 'claude'"
+                                    type="button" 
+                                    role="tab">
+                                    Claude Desktop
+                                </button>
+                            </li>
                         </ul>
             
                         <!-- Tab content -->
                         <div class="mcp-settings__tab-content">
-                            <!-- Claude Desktop -->
-                            <div v-show="activeTab === 'claude'" class="mcp-settings__tab-pane" role="tabpanel">
-                                <p class="mcp-settings__text">
-                                    Add this to your Claude Desktop configuration file:<br>
-                                    <strong>Windows:</strong> <code>%APPDATA%\Claude\claude_desktop_config.json</code><br>
-                                    <strong>macOS:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code><br>
-                                    <strong>Requirements:</strong> npx and mcp-remote must be installed.
-                                </p>
-                                <div class="mcp-settings__code-block-wrapper">
-                                    <pre class="mcp-settings__code-block" style="max-height: 300px; overflow-y: auto;"><code>{{ claudeConfigJson }}</code></pre>
-                                    <button 
-                                        class="mcp-settings__button mcp-settings__button--copy" 
-                                        @click="copyToClipboard(claudeConfigJson, 'Claude configuration copied!')">
-                                        Copy JSON
-                                    </button>
+                            <!-- Goose -->
+                            <div v-show="activeTab === 'goose'" class="mcp-settings__tab-pane" role="tabpanel">
+                                                             
+                                <div class="mcp-settings__field mcp-settings__field--full-width">
+                                    <a 
+                                        :href="gooseExtensionUrl" 
+                                        class="mcp-settings__button mcp-settings__button--primary mcp-settings__goose-add-link">
+                                        Add DNN MCP server in Goose
+                                    </a>
+                                    <p></p>
+                                    <p class="mcp-settings__text" style="margin-top: 12px;">
+                                        Then add the authorization header to the Goose extension
+                                    </p>
+                                    <div class="mcp-settings__field">
+                                        <label class="mcp-settings__label">Header name</label>
+                                        <div class="mcp-settings__input-group">
+                                            <input 
+                                                type="text" 
+                                                class="mcp-settings__input" 
+                                                value="Authorization" 
+                                                readonly
+                                                style="font-size: 11px;">
+                                            <button 
+                                                class="mcp-settings__button mcp-settings__button--secondary" 
+                                                @click="copyToClipboard('Authorization', 'Header name copied!')">
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mcp-settings__field">
+                                        <label class="mcp-settings__label">Header value</label>
+                                        <div class="mcp-settings__input-group">
+                                            <input 
+                                                type="text" 
+                                                class="mcp-settings__input" 
+                                                :value="authorizationHeader" 
+                                                readonly
+                                                style="font-size: 11px;">
+                                            <button 
+                                                class="mcp-settings__button mcp-settings__button--secondary" 
+                                                @click="copyToClipboard(authorizationHeader, 'Header value copied!')">
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                  
                                 </div>
                             </div>
-            
+
                             <!-- Cursor -->
                             <div v-show="activeTab === 'cursor'" class="mcp-settings__tab-pane" role="tabpanel">
                                 <p class="mcp-settings__text">
@@ -182,6 +222,24 @@
                                     </button>
                                 </div>
                             </div>
+
+                            <!-- Claude Desktop -->
+                            <div v-show="activeTab === 'claude'" class="mcp-settings__tab-pane" role="tabpanel">
+                                <p class="mcp-settings__text">
+                                    Add this to your Claude Desktop configuration file:<br>
+                                    <strong>Windows:</strong> <code>%APPDATA%\Claude\claude_desktop_config.json</code><br>
+                                    <strong>macOS:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code><br>
+                                    <strong>Requirements:</strong> npx and mcp-remote must be installed.
+                                </p>
+                                <div class="mcp-settings__code-block-wrapper">
+                                    <pre class="mcp-settings__code-block" style="max-height: 300px; overflow-y: auto;"><code>{{ claudeConfigJson }}</code></pre>
+                                    <button 
+                                        class="mcp-settings__button mcp-settings__button--copy" 
+                                        @click="copyToClipboard(claudeConfigJson, 'Claude configuration copied!')">
+                                        Copy JSON
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -189,10 +247,33 @@
  
             <div class="mcp-settings__section">
                 <label class="mcp-settings__label">Activated tools</label>
-                <div v-for="tool in tools" :key="tool.name" class="mcp-settings__checkbox-row">
-                    <input type="checkbox" v-model="tool.active" :id="tool.name" class="mcp-settings__checkbox">
-                    <label :for="tool.name" class="mcp-settings__checkbox-label">{{tool.name}} : {{tool.description}}</label>
-                </div>
+                <template v-for="(categoryTools, category) in toolsByCategory" :key="category">
+                    <div class="mcp-settings__tool-category" v-if="categoryTools.length">
+                        <div class="mcp-settings__tool-category-header">
+                            <h4 class="mcp-settings__tool-category-title">{{ category || 'Other' }}</h4>
+                            <div class="mcp-settings__tool-category-actions">
+                                <button
+                                    type="button"
+                                    class="mcp-settings__category-btn"
+                                    @click="selectAllInCategory(categoryTools)"
+                                >
+                                    Select all
+                                </button>
+                                <button
+                                    type="button"
+                                    class="mcp-settings__category-btn"
+                                    @click="deselectAllInCategory(categoryTools)"
+                                >
+                                    Deselect all
+                                </button>
+                            </div>
+                        </div>
+                        <div v-for="tool in categoryTools" :key="tool.name" class="mcp-settings__checkbox-row">
+                            <input type="checkbox" v-model="tool.active" :id="tool.name" class="mcp-settings__checkbox">
+                            <label :for="tool.name" class="mcp-settings__checkbox-label">{{ tool.name }} : {{ tool.description }}</label>
+                        </div>
+                    </div>
+                </template>
             </div>
             <!-- Rules Management -->
             <div class="mcp-settings__section">
@@ -265,7 +346,7 @@ export default {
             message: '',
             isThinking: false,
             tools: [],
-            activeTab: 'claude',
+            activeTab: 'goose',
             showMcpConfig: false
         };
     },
@@ -340,6 +421,45 @@ export default {
                 }
             };
             return JSON.stringify(config, null, 2);
+        },
+        gooseConfigJson() {
+            const config = {
+                "mcpServers": {
+                    "dnn-mcp": {
+                        "url": this.mcpServerUrl,
+                        "headers": {
+                            "Authorization": this.authorizationHeader
+                        }
+                    }
+                }
+            };
+            return JSON.stringify(config, null, 2);
+        },
+        gooseExtensionUrl() {
+            const params = new URLSearchParams({
+                url: this.mcpServerUrl,
+                type: 'streamable_http',
+                id: 'dnn-mcp',
+                name: 'DNN MCP',
+                description: 'DNN MCP server - tools for this site'
+            });
+            return `goose://extension?${params.toString()}`;
+        },
+        toolsByCategory() {
+            const groups = {};
+            for (const tool of this.tools || []) {
+                const cat = (tool.category && String(tool.category).trim()) || '';
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(tool);
+            }
+            const ordered = {};
+            const keys = Object.keys(groups).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b);
+            });
+            keys.forEach(k => { ordered[k] = groups[k]; });
+            return ordered;
         }
     },
     methods: {
@@ -387,6 +507,12 @@ export default {
         },
         cancel(){
             this.$emit('close');
+        },
+        selectAllInCategory(categoryTools) {
+            categoryTools.forEach(t => { t.active = true; });
+        },
+        deselectAllInCategory(categoryTools) {
+            categoryTools.forEach(t => { t.active = false; });
         },
         generateApiKey() {
             // Generate a random API key (UUID-like format)
@@ -517,6 +643,26 @@ export default {
     font-weight: 600;
 }
 
+.mcp-settings__tip {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #2e7d32;
+    background: #e8f5e9;
+    border-radius: 4px;
+    border-left: 3px solid #2e7d32;
+}
+
+.mcp-settings__tip-link {
+    color: #1b5e20;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.mcp-settings__tip-link:hover {
+    text-decoration: underline;
+}
+
 .mcp-settings__field {
     display: flex;
     flex-direction: column;
@@ -593,6 +739,50 @@ export default {
     margin-bottom: 8px;
 }
 
+.mcp-settings__tool-category {
+    margin-bottom: 16px;
+}
+
+.mcp-settings__tool-category:last-child {
+    margin-bottom: 0;
+}
+
+.mcp-settings__tool-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.mcp-settings__tool-category-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+}
+
+.mcp-settings__tool-category-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.mcp-settings__category-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+    cursor: pointer;
+    color: #555;
+}
+
+.mcp-settings__category-btn:hover {
+    background: #e8e8e8;
+    color: #333;
+}
+
 .mcp-settings__checkbox-label {
     font-size: 13px;
 }
@@ -667,6 +857,11 @@ export default {
     color: #fff;
 }
 
+.mcp-settings__goose-add-link {
+    width: 200px;
+    text-decoration: none;
+}
+
 .mcp-settings__button--success {
     background: #2e7d32;
     border-color: #2e7d32;
@@ -734,7 +929,7 @@ export default {
 }
 
 .mcp-settings__tab-pane {
-    /* v-show handles visibility */
+    display: block; /* v-show handles visibility */
 }
 
 .mcp-settings__text {

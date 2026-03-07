@@ -84,9 +84,15 @@
             <div class="role-label">assistant</div>
             <div v-if="waitMessage" class="content wait-indicator">{{ waitMessage }}</div>
             <div v-else class="content thinking-indicator">
-              <span class="thinking-letter" style="animation-delay: 0s">D</span>
-              <span class="thinking-letter" style="animation-delay: 0.15s">N</span>
-              <span class="thinking-letter" style="animation-delay: 0.3s">N</span>
+              <template v-if="executingTools.length">
+                <span class="executing-tools-label">Running</span>
+                <span v-for="(t, i) in executingTools" :key="t" class="executing-tool-name">{{ t }}<span v-if="i < executingTools.length - 1">,&nbsp;</span></span>
+              </template>
+              <template v-else>
+                <span class="thinking-letter" style="animation-delay: 0s">D</span>
+                <span class="thinking-letter" style="animation-delay: 0.15s">N</span>
+                <span class="thinking-letter" style="animation-delay: 0.3s">N</span>
+              </template>
               <span class="thinking-dot" style="animation-delay: 0.5s">.</span>
               <span class="thinking-dot" style="animation-delay: 0.65s">.</span>
               <span class="thinking-dot" style="animation-delay: 0.8s">.</span>
@@ -186,6 +192,7 @@ export default {
       debug: false,
       streamingText: "",
       waitMessage: "",
+      executingTools: [],
       _abortController: null,
       _waitTimer: null
     };
@@ -280,6 +287,7 @@ export default {
         this._abortController = null;
       }
       this.clearWaitTimer();
+      this.executingTools = [];
       this.commitStreamingText();
       this.isThinking = false;
     },
@@ -338,9 +346,16 @@ export default {
             this.streamingText += text;
             this.scrollToBottom();
           },
+          onToolStart: (data) => {
+            this.commitStreamingText();
+            if (!this.executingTools.includes(data.toolName)) {
+              this.executingTools.push(data.toolName);
+            }
+            this.scrollToBottom();
+          },
           onAutoTool: (data) => {
             this.clearWaitTimer();
-            this.commitStreamingText();
+            this.executingTools = this.executingTools.filter(t => t !== data.toolName);
             this.messages.push({ role: "tool", toolName: data.toolName, content: data.result });
             this.scrollToBottom();
           },
@@ -349,6 +364,7 @@ export default {
           },
           onDone: (res) => {
             this.clearWaitTimer();
+            this.executingTools = [];
             this.streamingText = "";
             if (res.success) {
               if (this.debug && res.debugMessages) {
@@ -416,9 +432,16 @@ export default {
             this.streamingText += text;
             this.scrollToBottom();
           },
+          onToolStart: (data) => {
+            this.commitStreamingText();
+            if (!this.executingTools.includes(data.toolName)) {
+              this.executingTools.push(data.toolName);
+            }
+            this.scrollToBottom();
+          },
           onAutoTool: (data) => {
             this.clearWaitTimer();
-            this.commitStreamingText();
+            this.executingTools = this.executingTools.filter(t => t !== data.toolName);
             this.messages.push({ role: "tool", toolName: data.toolName, content: data.result });
             this.scrollToBottom();
           },
@@ -427,6 +450,7 @@ export default {
           },
           onDone: (res) => {
             this.clearWaitTimer();
+            this.executingTools = [];
             this.streamingText = "";
             if (res.success) {
               if (this.debug && res.debugMessages) {
@@ -899,6 +923,17 @@ export default {
 @keyframes waitPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+.executing-tools-label {
+  font-size: 13px;
+  color: #888;
+  margin-right: 4px;
+}
+
+.executing-tool-name {
+  font-size: 14px;
+  color: #1976d2;
 }
 
 .thinking-indicator {

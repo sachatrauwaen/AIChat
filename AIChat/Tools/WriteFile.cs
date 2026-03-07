@@ -27,6 +27,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "write-file",
                 Title = "Write File",
                 Description = "Write content to a file using DNN File System APIs",
+                Category = "Files",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

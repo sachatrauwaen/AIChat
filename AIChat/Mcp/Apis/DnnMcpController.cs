@@ -64,6 +64,7 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
                     Name = t.Name,
                     Description = t.Description,
                     Active = tools.Contains(t.Name),
+                    Category = t.Category,
                 }).ToList();
 
                 var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "mcp/prompts";

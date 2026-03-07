@@ -27,6 +27,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "update-html",
                 Title = "Update HTML Module Content",
                 Description = "Update the HTML content of a DNN HTML module by module ID.",
+                Category = "Modules",
                 Parameters = new List<ToolParameter>
                 {
                      new ToolParameter

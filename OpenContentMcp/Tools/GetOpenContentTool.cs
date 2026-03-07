@@ -25,6 +25,7 @@ namespace Satrabel.OpenContentMcp.Tools
                 Name = "get-opencontent-items",
                 Title = "Get OpenContent Items",
                 Description = "Get content of OpenContent Module",
+                Category = "Open Content",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

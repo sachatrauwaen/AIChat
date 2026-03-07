@@ -27,6 +27,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "add-module",
                 Title = "Add Module",
                 Description = "Add a module to a DNN page",
+                Category = "Modules",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

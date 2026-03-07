@@ -22,6 +22,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "add-page",
                 Title = "Add Page",
                 Description = "Add a new page to DNN portal",
+                Category = "Pages",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

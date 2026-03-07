@@ -9,7 +9,7 @@
 
 	
 	<PropertyGroup>
-    <WebsitePath>c:\sacha\dnn\DNN910\</WebsitePath>
+    <WebsitePath>c:\sacha\dnn\testbuild\website\</WebsitePath>
   </PropertyGroup>	
 		
   <Target Name="DeployModule" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

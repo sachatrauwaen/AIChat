@@ -21,6 +21,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "send-email",
                 Title = "Send Email",
                 Description = "Sends an email using DotNetNuke mail services",
+                Category = "Communication",
                 Parameters = new List<ToolParameter>
                 {
                     new ToolParameter

@@ -20,6 +20,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-files",
                 Title = "Get Files",
                 Description = "Get list of files from a specific folder",
+                Category = "Files",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter>
                 {

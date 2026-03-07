@@ -26,6 +26,7 @@ namespace Satrabel.AIChat.Tools
                 Name = "get-pages",
                 Title = "Get Pages",
                 Description = "Get list of pages of website",
+                Category = "Pages",
                 ReadOnly = true,
                 Parameters = new List<ToolParameter> { },
                 Handler = (arguments) =>
