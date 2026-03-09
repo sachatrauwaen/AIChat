@@ -55,8 +55,10 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 
 ## Installation
 
-Download install package [Releases](https://github.com/sachatrauwaen/AIChat/releases)
-Install it as a normal DNN Extensions
+1. Download install package [Releases](https://github.com/sachatrauwaen/AIChat/releases)
+2. Install it as a normal DNN Extension
+3. Choose your LLM provider and add there api api in AI settings
+4. Activate the needed tools in AI settings
 
 ## Usage
 
