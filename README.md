@@ -21,13 +21,14 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 - Chat with your DNN portal from the PersonaBar.
 - **Multiple LLM providers**: choose from Anthropic (Claude), Google (Gemini), OpenAI (GPT), Zai (GLM), and other models supported by LlmTornado.
 - Configurable model, max tokens, and conversation history limits.
+- **Custom rules**: define rules  from AI Settings.
 
 ### MCP (Model Context Protocol) server
 - Expose your DNN portal as an MCP server so external AI clients can connect and use DNN tools.
 - **Bearer API key** authentication: generate and manage keys with optional validity (e.g. 7 days, 90 days, never expires).
 - **Client configuration** guides for Goose, Cursor, GitHub Copilot, and Claude Desktop.
 - **Tool selection**: enable or disable which tools are available per portal.
-- **Custom rules/prompts**: define prompts in `mcp/prompts` and manage them from MCP Settings.
+- **Custom prompts**: define prompts in `mcp/prompts` and manage them from MCP Settings.
 
 ### Tools
 - **Portal management**: pages (add, get, update, delete), modules (add, get, update), HTML module content, folders and files, system files, send email, get URL HTML, get URL SEO. [More details](https://github.com/sachatrauwaen/AIChat/wiki/Tools)
