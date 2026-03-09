@@ -1,4 +1,4 @@
-# DNN AI Assistant 
+# DNN AI Assistant & MCP Server
 
 This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as an **MCP (Model Context Protocol) server** so external AI clients can use your portal's tools.
 
