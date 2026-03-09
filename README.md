@@ -6,7 +6,7 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 
 **MCP server** allows clients such as [Goose](https://block.github.io/goose/), Cursor, GitHub Copilot, and Claude Desktop to connect to your DNN portal and use the same tools (pages, modules, files, Open Content, etc.) with Bearer token authentication.
 
-**Use with caution . AiChat can make changes to your DNN portal.**
+> Use with caution . AiChat can make changes to your DNN portal.
 
 ---
 
