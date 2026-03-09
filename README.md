@@ -2,7 +2,7 @@
 
 This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as an **MCP (Model Context Protocol) server** so external AI clients can use your portal's tools.
 
-**In-portal chat** uses multiple LLM providers (Anthropic Claude, Google Gemini, OpenAI, and more) via LlmTornado. You need an API key from your chosen provider (e.g. [Anthropic](https://console.anthropic.com)) to use the built-in chat.
+**In-portal chat** uses multiple LLM providers (Anthropic Claude, Google Gemini, OpenAI, and more) via [LlmTornado](https://llmtornado.ai/). You need an API key from your chosen provider (e.g. [Anthropic](https://console.anthropic.com)) to use the built-in chat.
 
 **MCP server** allows clients such as [Goose](https://block.github.io/goose/), Cursor, GitHub Copilot, and Claude Desktop to connect to your DNN portal and use the same tools (pages, modules, files, Open Content, etc.) with Bearer token authentication.
 
