@@ -6,7 +6,7 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 
 **MCP server** allows clients such as [Goose](https://block.github.io/goose/), Cursor, GitHub Copilot, and Claude Desktop to connect to your DNN portal and use the same tools (pages, modules, files, Open Content, etc.) with Bearer token authentication.
 
-**Use with caution . Ai can make changes to your DNN content.**
+**Use with caution . AiChat can make changes to your DNN portal.**
 
 ---
 
@@ -30,7 +30,7 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 - **Custom rules/prompts**: define prompts in `mcp/prompts` and manage them from MCP Settings.
 
 ### Tools
-- **Portal management**: pages (add, get, update, delete), modules (add, get, update), HTML module content, folders and files, system files, send email, get URL HTML, get URL SEO.
+- **Portal management**: pages (add, get, update, delete), modules (add, get, update), HTML module content, folders and files, system files, send email, get URL HTML, get URL SEO. [More details](https://github.com/sachatrauwaen/AIChat/wiki/Tools)
 - **Open Content** (when [OpenContentMcp](https://github.com/sachatrauwaen/OpenContentAICHat) is installed): get, add, update Open Content items; manage templates.
 - **SEO**: URL SEO tool (when SeoTools is installed).
 - Tools are shared between the in-portal chat and MCP clients; add your own by implementing `IMcpProvider` and registering tools with `IMcpRegistry`. Example: [Open Content AIChat](https://github.com/sachatrauwaen/OpenContentAICHat).
@@ -51,6 +51,11 @@ This extension adds an AI-powered chat to the DNN PersonaBar and exposes DNN as 
 # Documentation
 
 [https://github.com/sachatrauwaen/AIChat/wiki](https://github.com/sachatrauwaen/AIChat/wiki)
+
+## Installation
+
+Download install package [Releases](https://github.com/sachatrauwaen/AIChat/releases)
+Install it as a normal DNN Extensions
 
 ## Usage
 
