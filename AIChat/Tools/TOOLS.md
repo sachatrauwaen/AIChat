@@ -1,3 +1,225 @@
+## AIChat Tools – End User Documentation
+
+This document describes the MCP tools registered in `Satrabel.AIChat.Tools`. Tool names are the identifiers you use when calling tools from the AI; titles and descriptions are intended for human operators.
+
+---
+
+### Pages
+
+#### `add-page` – Add Page
+- **Purpose**: Add a new page to the current DNN portal.
+- **Key behavior**: Creates a page with optional title, description, parent page, and visibility. Fails if a non‑deleted page with the same name already exists or the parent page is invalid.
+- **Parameters**:
+  - **`pageName`** *(string, required)*: Name of the page to create.
+  - **`pageTitle`** *(string, optional)*: Display title for the page.
+  - **`description`** *(string, optional)*: Page description.
+  - **`parentId`** *(number, optional)*: ID of the parent page. Use `-1` for a root‑level page.
+  - **`visible`** *(boolean, optional)*: Whether the page is shown in the menu; defaults to visible.
+- **Return value**:
+  - On success: the new page `TabID` as a string.
+  - On failure: an error string such as `Error: Page name cannot be empty`, `PageCreateFailed`, `PageNotFound`, or a validation error message.
+
+#### `update-page` – Update Page
+- **Purpose**: Update properties of an existing page in the current DNN portal.
+- **Key behavior**: Looks up page settings by `tabId`, applies any non‑empty values you supply, and saves changes if the current user has permission.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page to update.
+  - **`pageName`** *(string, optional)*: New page name (leave empty to keep existing).
+  - **`pageTitle`** *(string, optional)*: New page title.
+  - **`description`** *(string, optional)*: New page description.
+  - **`parentId`** *(number, optional)*: New parent page ID. Use `-1` to keep the current parent.
+- **Return value**:
+  - `"PageUpdatedMessage"` on success.
+  - `"PageNotFound"`, `"MethodPermissionDenied"`, or a validation error message on failure.
+
+#### `delete-page` – Delete Page
+- **Purpose**: Delete an existing page from the current DNN portal.
+- **Key behavior**: Validates the page exists, is not already deleted, and that the current user can delete it before performing the deletion.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page to delete.
+- **Return value**:
+  - `"PageDeleted"` on success.
+  - Error strings such as `Error: Invalid page ID`, `PageNotFound`, `MethodPermissionDenied`, or a detailed error message on failure.
+
+#### `get-pages` – Get Pages
+- **Purpose**: List all non‑deleted pages in the current portal.
+- **Key behavior**: Returns basic metadata for each page; read‑only.
+- **Parameters**: None.
+- **Return value**: JSON array of pages with fields:
+  - `TabID`, `TabName`, `Title`, `Description`, `Url`, `ParentId`.
+
+#### `get-page` – Get Page
+- **Purpose**: Retrieve details of a single page by ID.
+- **Key behavior**: Uses internal page settings API; read‑only.
+- **Parameters**:
+  - **`pageId`** *(number, required)*: ID of the page to retrieve.
+- **Return value**:
+  - On success: JSON representation of the page settings.
+  - On failure: `"PageNotFound"`, an `Error: ...` message, or `Error: Invalid page ID`.
+
+---
+
+### Modules
+
+#### `add-module` – Add Module
+- **Purpose**: Add a module instance to a page.
+- **Key behavior**: Finds the requested desktop module by name, creates a module on the specified page and pane, and initializes permissions and culture. Requires permission to manage the page.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page to add the module to.
+  - **`moduleName`** *(string, required)*: Internal desktop module name (e.g. `"DNN_HTML"`).
+  - **`paneName`** *(string, optional)*: Pane to place the module in; defaults to `"ContentPane"`.
+  - **`title`** *(string, optional)*: Module title; defaults to the module definition’s friendly name.
+- **Return value**:
+  - On success: Text of the form `"Module added with ModuleDefID: <id>"`.
+  - On failure: `"Error adding module: <message>"`.
+
+#### `get-modules` – Get Modules
+- **Purpose**: List modules on a specific page.
+- **Key behavior**: Reads module metadata from the specified page; read‑only.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page to inspect.
+- **Return value**: JSON array with, for each module:
+  - `ModuleID`, `ModuleName` (desktop module name), `ModuleTitle`, `PaneName`.
+
+#### `get-html` – Get HTML Module Content
+- **Purpose**: Get the current HTML content from a DNN HTML module.
+- **Key behavior**: Validates the module is of type `DNN_HTML` and returns the latest workflow content; read‑only.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page containing the module.
+  - **`moduleId`** *(number, required)*: ID of the HTML module.
+- **Return value** (JSON):
+  - On success: `{ moduleId, tabId, content }`.
+  - If no content exists yet: `{ content: "", moduleId }`.
+  - On failure: `{ error: "<message>" }`.
+
+#### `update-html` – Update HTML Module Content
+- **Purpose**: Update the HTML content of a DNN HTML module.
+- **Key behavior**: Validates the target module and page, ensures it is an HTML module, and updates the workflow content.
+- **Parameters**:
+  - **`tabId`** *(number, required)*: ID of the page containing the module (used for validation).
+  - **`moduleId`** *(number, required)*: ID of the HTML module to update.
+  - **`content`** *(string, required)*: New HTML content to store.
+- **Return value** (JSON):
+  - On success: `{ success: true, moduleId, message: "HTML content updated successfully." }`.
+  - On failure: `{ error: "<message>" }`.
+
+---
+
+### Files (Portal File System)
+
+#### `get-folders` – Get Folders
+- **Purpose**: List folders in the DNN file system.
+- **Key behavior**: Returns all folders or the children of a given parent folder; read‑only.
+- **Parameters**:
+  - **`parentFolder`** *(string, optional)*: Folder path relative to the portal root (e.g. `"Images"`). Empty or `/` lists all folders.
+- **Return value**: JSON array of folders with:
+  - `FolderID`, `FolderName`, `FolderPath`.
+
+#### `get-files` – Get Files
+- **Purpose**: List files in a specific DNN folder.
+- **Key behavior**: Uses DNN `FolderManager`/`FileManager` to read file metadata; read‑only.
+- **Parameters**:
+  - **`folderPath`** *(string, optional)*: Folder path relative to the portal (e.g. `"Images/Banners"`). Empty or omitted refers to the root folder.
+- **Return value**:
+  - On success: JSON array with `FileId`, `FileName`, `RelativePath`, `Extension`, `Size` (KB), `LastModified`.
+  - On failure: `"Error: Folder '<path>' not found"` or `"Error getting files: <message>"`.
+
+#### `read-file` – Read File
+- **Purpose**: Read the content of a file stored in the DNN file system.
+- **Key behavior**: Resolves the folder and file via DNN APIs and streams the file contents; read‑only.
+- **Parameters**:
+  - **`path`** *(string, required)*: File path relative to the portal file system (e.g. `"Documents/guide.txt"`).
+- **Return value**:
+  - On success: Raw file content as text.
+  - On failure: Error strings such as `Error: Folder '...' not found`, `Error: File '...' not found in folder '...'`, or `Error reading file: <message>`.
+
+#### `write-file` – Write File
+- **Purpose**: Create or update a file using DNN file system APIs.
+- **Key behavior**: Writes UTF‑8 content to the specified path, creating the folder if necessary. Creates a dated backup when overwriting, and blocks sensitive extensions such as `.exe`, `.dll`, `.config`, `.asax`, `.cs`, and `web.config`.
+- **Parameters**:
+  - **`path`** *(string, required)*: File path relative to the portal file system.
+  - **`content`** *(string, required)*: Text content to write.
+- **Return value** (JSON):
+  - On update: `{ Success: true, Message: "File updated successfully", FileName, RelativePath, Size, LastModified, backup }`.
+  - On create: `{ Success: true, Message: "File created successfully", FileName, FolderPath, Size, LastModified }`.
+  - On error: `{ Success: false, Message: "Error writing file: <message>" }` or a string error for restricted extensions.
+
+---
+
+### System Files (Portal System Directory)
+
+#### `get-system-files` – Get System Files
+- **Purpose**: List system files and subfolders under the portal’s system directory.
+- **Key behavior**: Resolves the path under the portal’s `HomeSystemDirectory` and lists both files and subdirectories; read‑only.
+- **Parameters**:
+  - **`folderPath`** *(string, optional)*: Relative path under the system directory. Empty means the root system folder.
+- **Return value** (JSON object):
+  - `Files`: array with `FileName`, `RelativePath`, `Extension`, `Size` (KB), `LastModified`.
+  - `Directories`: array with `Name`, `FullPath`, `RelativePath`, `LastModified`, `Attributes`.
+
+#### `read-system-file` – Read System File
+- **Purpose**: Read the content of a text file under the portal’s system directory.
+- **Key behavior**: Resolves the path under `HomeSystemDirectory`, rejects paths whose directory portion contains dots, rejects large (>10 MB) or binary files, and returns the content for allowed text files; read‑only.
+- **Parameters**:
+  - **`path`** *(string, required)*: Relative path under the system directory (e.g. `"config/settings.json"`).
+- **Return value**:
+  - On success: Raw file content as text.
+  - On failure: Error messages such as `Error: File '<path>' not found`, `Error: File size (...) exceeds the maximum allowed size (10 MB)`, `Error: Cannot read binary file '...'`, or `Error reading file: <message>`.
+
+#### `write-system-file` – Write System File
+- **Purpose**: Write a text file under the portal’s system directory.
+- **Key behavior**: Resolves the path under `HomeSystemDirectory`, creates directories as needed, and blocks writing to sensitive locations or file types (e.g. `.exe`, `.dll`, `.config`, `.asax`, `.cs`, `web.config`) or paths whose directory portion contains dots.
+- **Parameters**:
+  - **`filePath`** *(string, required)*: Relative path under the system directory.
+  - **`content`** *(string, required)*: Text content to write.
+- **Return value** (JSON):
+  - On success: `{ Success: true, Message: "File written successfully", FileName, FilePath, Size, LastModified }`.
+  - On failure: `{ Success: false, Message: "Error writing file: <message>" }` or string errors describing security restrictions.
+
+---
+
+### Web / SEO
+
+#### `get-url-html` – Get HTML of a URL
+- **Purpose**: Download the raw HTML of an HTTP/HTTPS URL.
+- **Key behavior**: Performs an HTTP GET with `HttpClient` and returns the HTML as a string; read‑only.
+- **Parameters**:
+  - **`url`** *(string, required)*: Absolute URL to fetch.
+- **Return value**:
+  - On success: Raw HTML string.
+  - On failure: JSON object `{ error: "<message>" }`.
+
+#### `get-url-seo` – Get SEO Information of a URL
+- **Purpose**: Fetch a URL and extract SEO‑relevant information from its HTML.
+- **Key behavior**: Downloads the page, parses it with AngleSharp, and returns a structured JSON report with metadata, headings, links, structured data, and basic page‑speed hints; read‑only.
+- **Parameters**:
+  - **`url`** *(string, required)*: Absolute URL to analyze.
+- **Return value** (JSON object) including fields such as:
+  - `Url`, `Title`, `MetaDescription`, `MetaKeywords`, `MetaRobots`, `Language`, `Charset`, `Canonical`, `Viewport`.
+  - `HreflangTags`, `OpenGraph`, `TwitterCard`.
+  - `H1`, `H2`, `H3` (lists of heading texts).
+  - `ImageCount`, `ImagesWithoutAlt`, `ImagesWithEmptyAlt`.
+  - `InternalLinkCount`, `ExternalLinkCount`, `ExternalLinks`.
+  - `StructuredData` (JSON‑LD blocks).
+  - `InlineStyleCount`, `ExternalScriptCount`, `ExternalStylesheetCount`.
+  - On error: `{ error: "<message>" }`.
+
+---
+
+### Communication
+
+#### `send-email` – Send Email
+- **Purpose**: Send an email using the portal’s configured DotNetNuke mail settings.
+- **Key behavior**: Uses the host email as sender and supports plain‑text or HTML body.
+- **Parameters**:
+  - **`toEmail`** *(string, required)*: Recipient email address.
+  - **`subject`** *(string, required)*: Email subject line.
+  - **`body`** *(string, required)*: Email body content.
+  - **`isHtml`** *(boolean, optional)*: Set to `true` if the body is HTML; default is `false`.
+- **Return value** (JSON):
+  - On success: `{ success: true, message: "Email sent successfully" }`.
+  - On failure: `{ success: false, error: "<message or SMTP error>" }`.
+
 ### AIChat MCP Tools
 
 This document describes the MCP tools registered in `AIChat/Tools`.  

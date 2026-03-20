@@ -180,7 +180,7 @@
         </div>
 
         <div class="ai-settings__field">
-          <label class="ai-settings__label">Specific rules</label>
+          <label class="ai-settings__label">Skills</label>
           <div
             v-for="(rule, index) in rules"
             :key="index"
@@ -215,7 +215,7 @@
             class="ai-settings__button ai-settings__button--secondary ai-settings__add-rule"
             @click="addRule"
           >
-            Add new rule
+            Add new skill
           </button>
         </div>
       </section>
@@ -609,7 +609,7 @@ export default {
 }
 
 .ai-settings__button--secondary {
-    background: #f5f5f5;
+    background: #eeeeee;
 }
 
 .ai-settings__button--danger {

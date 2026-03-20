@@ -67,7 +67,7 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
                     Category = t.Category,
                 }).ToList();
 
-                var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "mcp/prompts";
+                var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "prompts");
 
                 if (Directory.Exists(rulesPath))
                 {
@@ -117,7 +117,7 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
             {
                 PortalController.UpdatePortalSetting(PortalId, TOOLS_SETTING, string.Join(",", request.Tools.Where(t => t.Active).Select(t => t.Name)));
             }
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "mcp/prompts";
+            var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "prompts");
             
             if (!Directory.Exists(rulesPath))
             {
@@ -158,7 +158,7 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
             //{
             //    res.Rules.AddRange(GetRules(AppDomain.CurrentDomain.BaseDirectory + folder.Replace("/", "\\").Trim('\\')));
             //}
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+            var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "prompts");
             res.Rules.AddRange(GetRules(rulesPath));
             res.Success = true;
             return res;
@@ -169,8 +169,7 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
             var res = new List<string>();
             if (Directory.Exists(folder))
             {
-                res.AddRange(Directory.GetFiles(folder)
-                    .Where(f => !f.EndsWith("global.md"))
+                res.AddRange(Directory.GetFiles(folder)                    
                     .Select(f => Path.GetFileNameWithoutExtension(f))
                     .ToList());
             }

@@ -1,6 +1,6 @@
 <dotnetnuke type="Package" version="5.0">
   <packages>
-    <package name="OpenContentAI" type="Library" version="01.01.00">
+    <package name="OpenContentAI" type="Library" version="01.02.00">
       <friendlyName>OpenContent Tool Provider</friendlyName>
       <description>OpenContent Tool Provider Library - Provides OpenContent template management tools for AI.</description>
       <iconFile></iconFile>

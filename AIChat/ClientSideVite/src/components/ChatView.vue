@@ -137,10 +137,23 @@
           <span v-if="totalPrice" class="price-info">
             ${{ totalPrice.toFixed(5) }} ({{ totalInputTokens }} in / {{ totalOutputTokens }} out)
           </span>
-          <select v-if="rules.length > 0" v-model="selectedRule" class="mode-select rules-select">
-            <option value="">No rules</option>
-            <option v-for="r in rules" :key="r" :value="r">{{ r }}</option>
-          </select>
+         
+          <div v-if="rules.length > 0" class="rules-dropdown-wrap" ref="rulesDropdownWrap">
+            <button type="button" class="btn rules-plus-btn" title="Rules" @click="showRulesDropdown = !showRulesDropdown">+</button>
+            <div v-show="showRulesDropdown" class="rules-dropdown" ref="rulesDropdown">
+              <div class="rules-dropdown-title">Include</div>
+              <label class="rules-dropdown-item">
+                <input type="checkbox" v-model="includeCurrentPage" />
+                <span>Current Page</span>
+              </label>
+              <div class="rules-dropdown-sep"></div>
+              <div class="rules-dropdown-title">Skills</div>
+              <label v-for="r in rules" :key="r" class="rules-dropdown-item">
+                <input type="checkbox" :checked="selectedRules.includes(r)" @change="toggleRule(r)" />
+                <span>{{ r }}</span>
+              </label>
+            </div>
+          </div>
           <select v-model="selectedMode" class="mode-select">
             <option value="chat">Chat</option>
             <option value="readonly">Agent (Read Only)</option>
@@ -170,6 +183,10 @@ export default {
       return this.messages.filter(m =>
         !(m.role === 'user' && m.content && m.content.startsWith('[Tool Result for '))
       );
+    },
+    effectiveRules() {
+      const parts = (this.includeCurrentPage ? ['Current Page'] : []).concat(this.selectedRules);
+      return parts.join(', ');
     }
   },
   data() {
@@ -184,7 +201,9 @@ export default {
       pendingToolCalls: [],
       selectedMode: "readonly",
       rules: [],
-      selectedRule: "",
+      selectedRules: [],
+      showRulesDropdown: false,
+      includeCurrentPage: false,
       totalPrice: 0,
       totalInputTokens: 0,
       totalOutputTokens: 0,
@@ -200,18 +219,17 @@ export default {
   watch: {
     selectedMode(val) {
       if (this._preferencesLoaded) {
-        // saveChatPreferences({ selectedMode: val, selectedRule: this.selectedRule }).catch(() => {});
-      }
-    },
-    selectedRule(val) {
-      if (this._preferencesLoaded) {
-        // saveChatPreferences({ selectedMode: this.selectedMode, selectedRule: val }).catch(() => {});
+        // saveChatPreferences({ selectedMode: val }).catch(() => {});
       }
     }
   },
   mounted() {
     this.fetchConversations();
     this.loadInfo();
+    document.addEventListener('click', this.handleRulesClickOutside);
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleRulesClickOutside);
   },
   methods: {
     scrollToBottom() {
@@ -232,7 +250,8 @@ export default {
         const data = await getInfo();
         this.rules = (data && data.rules) ? data.rules : [];
         this.selectedMode = (data && data.selectedMode != null) ? data.selectedMode : "readonly";
-        this.selectedRule = (data && data.selectedRule != null) ? data.selectedRule : "";
+        this.selectedRules = (data && data.selectedRules && data.selectedRules.length) ? data.selectedRules : [];
+        this.includeCurrentPage = !!(data && data.includeCurrentPage);
         this.debug = !!(data && data.debug);
         this._preferencesLoaded = true;
       } catch (e) {
@@ -304,6 +323,15 @@ export default {
       }
       this.waitMessage = "";
     },
+    toggleRule(rule) {
+      const i = this.selectedRules.indexOf(rule);
+      if (i >= 0) this.selectedRules.splice(i, 1);
+      else this.selectedRules.push(rule);
+    },
+    handleRulesClickOutside(e) {
+      const wrap = this.$refs.rulesDropdownWrap;
+      if (this.showRulesDropdown && wrap && !wrap.contains(e.target)) this.showRulesDropdown = false;
+    },
     startWaitCountdown(seconds) {
       this.clearWaitTimer();
       let remaining = seconds;
@@ -338,7 +366,8 @@ export default {
           toolName: null,
           toolArguments: null,
           mode: this.selectedMode,
-          rules: this.selectedRule || ""
+          selectedRules: this.selectedRules,
+          includeCurrentPage: this.includeCurrentPage
         }, {
           signal: this._abortController.signal,
           onToken: (text) => {
@@ -424,7 +453,8 @@ export default {
           toolArguments: this.toolCall.arguments,
           pendingToolCalls: this.pendingToolCalls.length > 0 ? this.pendingToolCalls : null,
           mode: this.selectedMode,
-          rules: this.selectedRule || ""
+          selectedRules: this.selectedRules,
+          includeCurrentPage: this.includeCurrentPage
         }, {
           signal: this._abortController.signal,
           onToken: (text) => {
@@ -856,6 +886,68 @@ export default {
   border: 1px solid #ccc;
   border-radius: 4px;
   align-self: flex-start;
+}
+
+.rules-dropdown-wrap {
+  position: relative;
+}
+
+.rules-plus-btn {
+  min-width: 32px;
+  padding: 6px 10px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rules-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  min-width: 180px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  padding: 6px 0;
+  z-index: 100;
+}
+
+.rules-dropdown-title {
+  padding: 2px 12px 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.rules-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rules-dropdown-item:hover {
+  background: #f0f0f0;
+}
+
+.rules-dropdown-item input {
+  flex-shrink: 0;
+}
+
+.rules-dropdown-sep {
+  height: 1px;
+  margin: 4px 12px;
+  background: #ddd;
 }
 
 .input-footer {

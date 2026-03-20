@@ -32,8 +32,11 @@ namespace Satrabel.PersonaBar.AIChat.Apis.Dto
         [JsonProperty("mode")]
         public string Mode { get; set; }
 
-        [JsonProperty("rules")]
-        public string Rules { get; set; }
+        [JsonProperty("selectedRules")]
+        public List<string> SelectedRules { get; set; }
+
+        [JsonProperty("includeCurrentPage")]
+        public bool IncludeCurrentPage { get; set; }
     }
 }
 

@@ -57,7 +57,8 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         private const string AUTO_WRITE_TOOLS_SETTING = "AIChat_AUTO_WRITE_TOOLS";
         private const string DEBUG_SETTING = "AIChat_Debug";
         private const string SELECTED_MODE_SETTING = "AIChat_SelectedMode";
-        private const string SELECTED_RULE_SETTING = "AIChat_SelectedRule";
+        private const string SELECTED_RULES_SETTING = "AIChat_SelectedRules";
+        private const string INCLUDE_CURRENT_PAGE_SETTING = "AIChat_IncludeCurrentPage";
         private const int MAX_TOKENS_DEFAULT = 4096;
 
         public AITornadoController(IMcpRegistry mcpRegistry, IServiceProvider dependencyProvider)
@@ -151,26 +152,41 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var hostContext = $"<host>Version = v.{Globals.FormatVersion(application.Version, true)}, Product = {application.Description}, PortalCount = {portalCount}, Framework = {(isHost ? Globals.NETFrameworkVersion.ToString() : string.Empty)} </host>";
             var portalContext = $"<portal>PortalName = {ps.PortalName}, DefaultPortalAlias = {ps.DefaultPortalAlias}, DefaultLanguage = {ps.DefaultLanguage}</portal>";
 
+            var pageContext = string.Empty;
+            if (request.IncludeCurrentPage)
+            {
+                var tab = PortalSettings.ActiveTab;
+                if (tab != null)
+                {
+                    pageContext = $"<currentpage>TabId = {tab.TabID}, TabName = {tab.TabName}, Title = {tab.Title}, Url = {tab.FullUrl}</currentpage>";
+                }
+            }
+
             var airules = string.Empty;
-            var rulesPath = ps.HomeSystemDirectoryMapPath + "airules";
+            var rulesPath = Path.Combine(ps.HomeSystemDirectoryMapPath, "aichat", "skills");
+            var rulesToApply = (request.SelectedRules != null && request.SelectedRules.Count > 0)
+                ? request.SelectedRules
+                : new List<string>();
+
             if (Directory.Exists(rulesPath))
             {
-                var globalFile = Path.Combine(rulesPath, "global.md");
+                var globalFile = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "global.md");
                 if (File.Exists(globalFile))
                 {
                     airules = "<global>" + File.ReadAllText(globalFile) + "</global>";
                 }
-                if (!string.IsNullOrEmpty(request.Rules))
+                foreach (var rule in rulesToApply)
                 {
-                    var rulePath = Path.Combine(rulesPath, request.Rules + ".md");
+                    if (string.IsNullOrWhiteSpace(rule) || rule == "Current Page") continue;
+                    var rulePath = Path.Combine(rulesPath, rule, "SKILL.md");
                     if (File.Exists(rulePath))
                     {
-                        airules += $"\n<{request.Rules}>" + File.ReadAllText(rulePath) + $"</{request.Rules}>";
+                        airules += $"\n<{rule}>" + File.ReadAllText(rulePath) + $"</{rule}>";
                     }
                 }
             }
 
-            return $"Output always in markdown format. When using tools, please use them one at a time and wait for results before making additional tool calls.\n{hostContext}\n{portalContext}\n{airules}";
+            return $"Output always in markdown format.\n{hostContext}\n{portalContext}\n{pageContext}\n{airules}";
         }
 
         private decimal CalculatePrice(string model, int inputTokens, int outputTokens)
@@ -199,7 +215,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpPost]
         public async Task<TornadoChatResponse> Chat(TornadoChatRequest request)
         {
-            SaveChatPreferences(request.Mode, request.Rules);
+            SaveChatPreferences(request.Mode, request.SelectedRules, request.IncludeCurrentPage);
             if (string.IsNullOrEmpty(GetApiKey()))
             {
                 return new TornadoChatResponse
@@ -556,7 +572,7 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         [HttpPost]
         public HttpResponseMessage ChatStream(TornadoChatRequest request)
         {
-            SaveChatPreferences(request.Mode, request.Rules);
+            SaveChatPreferences(request.Mode, request.SelectedRules, request.IncludeCurrentPage);
 
             var apiKey = GetApiKey();
             var model = GetModel();
@@ -1146,25 +1162,27 @@ namespace Satrabel.PersonaBar.AIChat.Apis
                     Active = tools.Contains(t.ResolvedName),
                 }).OrderBy(t=> t.Name).ToList();
 
-                var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+                var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "skills");
 
                 if (Directory.Exists(rulesPath))
                 {
-                    res.Rules = Directory.GetFiles(rulesPath).Where(f => !f.EndsWith("global.md")).Select(f => new RuleDto
-                    {
-                        Name = Path.GetFileNameWithoutExtension(f),
-                        Rule = File.ReadAllText(f)
-                    }).ToList();
-                    var globalFilename = Path.Combine(rulesPath, "global.md");
-                    if (File.Exists(globalFilename))
-                    {
-                        res.GlobalRules = File.ReadAllText(globalFilename);
-                    }
+                    res.Rules = Directory.GetDirectories(rulesPath)                        
+                        .Select(d => new RuleDto
+                        {
+                            Name = Path.GetFileName(d),
+                            Rule = File.Exists(Path.Combine(d, "SKILL.md")) ? File.ReadAllText(Path.Combine(d, "SKILL.md")) : string.Empty
+                        }).ToList();
+                    
                 }
                 else
                 {
                     Directory.CreateDirectory(rulesPath);
 
+                }
+                var globalFile = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "global.md");
+                if (File.Exists(globalFile))
+                {
+                    res.GlobalRules = File.ReadAllText(globalFile);
                 }
                 if (string.IsNullOrEmpty(res.GlobalRules))
                 {
@@ -1204,23 +1222,26 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             PortalController.UpdatePortalSetting(PortalId, MAX_TOKENS_SETTING, request.MaxTokens.ToString());
             PortalController.UpdatePortalSetting(PortalId, HISTORY_MAX_TOKENS_SETTING, request.HistoryMaxTokens.ToString());
             PortalController.UpdatePortalSetting(PortalId, HISTORY_MAX_TURNS_SETTING, request.HistoryMaxTurns.ToString());
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
-            File.WriteAllText(Path.Combine(rulesPath, "global.md"), request.GlobalRules);
+            var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "skills");
             if (!Directory.Exists(rulesPath))
             {
                 Directory.CreateDirectory(rulesPath);
             }
-            var files = Directory.GetFiles(rulesPath).Where(f => !f.EndsWith("global.md"));
-            foreach (var file in files)
+            var globalDir = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat");
+            Directory.CreateDirectory(globalDir);
+            File.WriteAllText(Path.Combine(globalDir, "global.md"), request.GlobalRules);
+            foreach (var dir in Directory.GetDirectories(rulesPath))
             {
-                if (!request.Rules.Any(r => r.Name == Path.GetFileNameWithoutExtension(file)))
+                if (!request.Rules.Any(r => r.Name == Path.GetFileName(dir)))
                 {
-                    File.Delete(file);
+                    Directory.Delete(dir, true);
                 }
             }
             foreach (var rule in request.Rules)
             {
-                File.WriteAllText(Path.Combine(rulesPath, rule.Name + ".md"), rule.Rule);
+                var skillDir = Path.Combine(rulesPath, rule.Name);
+                Directory.CreateDirectory(skillDir);
+                File.WriteAllText(Path.Combine(skillDir, "SKILL.md"), rule.Rule);
             }
         }
 
@@ -1230,21 +1251,29 @@ namespace Satrabel.PersonaBar.AIChat.Apis
         {
             if (request == null) return;
 
-            SaveChatPreferences(request.SelectedMode, request.SelectedRule);
+            SaveChatPreferences(request.SelectedMode);
         }
 
-        private void SaveChatPreferences(string mode, string rule)
+        private void SaveChatPreferences(string mode, List<string> selectedRules = null, bool includeCurrentPage = false)
         {
             var validModes = new[] { "chat", "readonly", "agent" };
             if (string.IsNullOrEmpty(mode) || !validModes.Contains(mode))
                 mode = "readonly";
 
-            var selectedMode = PortalController.GetPortalSetting(SELECTED_MODE_SETTING, PortalId, "readonly");
-            var selectedRule = PortalController.GetPortalSetting(SELECTED_RULE_SETTING, PortalId, "");
-            if (mode != selectedMode)
+            var storedMode = PortalController.GetPortalSetting(SELECTED_MODE_SETTING, PortalId, "readonly");
+            var storedRules = PortalController.GetPortalSetting(SELECTED_RULES_SETTING, PortalId, "");
+            var storedIncludeCurrentPage = PortalController.GetPortalSetting(INCLUDE_CURRENT_PAGE_SETTING, PortalId, "false");
+
+            if (mode != storedMode)
                 PortalController.UpdatePortalSetting(PortalId, SELECTED_MODE_SETTING, mode);
-            if (rule != selectedRule)
-                PortalController.UpdatePortalSetting(PortalId, SELECTED_RULE_SETTING, rule ?? "");
+
+            var rulesValue = selectedRules != null ? string.Join(",", selectedRules) : "";
+            if (rulesValue != storedRules)
+                PortalController.UpdatePortalSetting(PortalId, SELECTED_RULES_SETTING, rulesValue);
+
+            var includeCurrentPageValue = includeCurrentPage ? "true" : "false";
+            if (includeCurrentPageValue != storedIncludeCurrentPage)
+                PortalController.UpdatePortalSetting(PortalId, INCLUDE_CURRENT_PAGE_SETTING, includeCurrentPageValue);
         }
 
         [HttpGet]
@@ -1269,13 +1298,15 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             {
                 res.Rules.AddRange(GetRules(AppDomain.CurrentDomain.BaseDirectory + folder.Replace("/", "\\").Trim('\\')));
             }
-            var rulesPath = PortalSettings.Current.HomeSystemDirectoryMapPath + "airules";
+            var rulesPath = Path.Combine(PortalSettings.Current.HomeSystemDirectoryMapPath, "aichat", "skills");
             res.Rules.AddRange(GetRules(rulesPath));
             res.AutoReadonlyTools = bool.Parse(PortalController.GetPortalSetting(AUTO_READONLY_TOOLS_SETTING, PortalId, "false"));
             res.AutoWriteTools = bool.Parse(PortalController.GetPortalSetting(AUTO_WRITE_TOOLS_SETTING, PortalId, "false"));
             res.Debug = bool.Parse(PortalController.GetPortalSetting(DEBUG_SETTING, PortalId, "false"));
             res.SelectedMode = PortalController.GetPortalSetting(SELECTED_MODE_SETTING, PortalId, "readonly");
-            res.SelectedRule = PortalController.GetPortalSetting(SELECTED_RULE_SETTING, PortalId, "");
+            var storedRules = PortalController.GetPortalSetting(SELECTED_RULES_SETTING, PortalId, "");
+            res.SelectedRules = string.IsNullOrEmpty(storedRules) ? new List<string>() : storedRules.Split(',').Where(r => !string.IsNullOrEmpty(r)).ToList();
+            res.IncludeCurrentPage = bool.Parse(PortalController.GetPortalSetting(INCLUDE_CURRENT_PAGE_SETTING, PortalId, "false"));
             res.Success = true;
             return res;
         }
@@ -1285,9 +1316,9 @@ namespace Satrabel.PersonaBar.AIChat.Apis
             var res = new List<string>();
             if (Directory.Exists(folder))
             {
-                res.AddRange(Directory.GetFiles(folder)
-                    .Where(f => !f.EndsWith("global.md"))
-                    .Select(f => Path.GetFileNameWithoutExtension(f))
+                res.AddRange(Directory.GetDirectories(folder)
+                    .Where(d => Path.GetFileName(d) != "global")
+                    .Select(d => Path.GetFileName(d))
                     .ToList());
             }
             return res;
