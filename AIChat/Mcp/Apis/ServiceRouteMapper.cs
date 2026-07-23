@@ -23,8 +23,8 @@ namespace Dnn.Mcp.WebApi
                 moduleFolderName: "Dnn/McpWebApi",
                 routeName: "mcp",
                 url: "mcp",
-                defaults: new { controller = "Mcp" },
-                namespaces: new[] { "Dnn.Mcp.WebApi.Controllers.Mcp" });
+                defaults: new { controller = "DnnMcp" },
+                namespaces: new[] { "Satrabel.PersonaBar.DnnMcp.Apis" });
 
         }
     }
