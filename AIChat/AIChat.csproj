@@ -187,6 +187,7 @@
     <Compile Include="Mcp\Apis\Dto\SettingsDto.cs" />
     <Compile Include="Mcp\Apis\Dto\ToolDto.cs" />
     <Compile Include="Mcp\Apis\ServiceRouteMapper.cs" />
+    <Compile Include="Mcp\Apis\McpController.cs" />
     <Compile Include="Mcp\Models\JsonRpcModels.cs" />
     <Compile Include="Mcp\Models\McpModels.cs" />
     <Compile Include="Mcp\Models\ToolExecutionRequest.cs" />
