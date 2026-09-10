@@ -30,7 +30,6 @@ namespace Satrabel.PersonaBar.DnnMcp.Apis
 
         private static readonly ILog Logger = LoggerSource.Instance.GetLogger(typeof(DnnMcpController));
 
-        // private readonly string _apiKey = "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"; // API key from env/config
         public const string APIKEY_SETTING = "DnnMcp_ApiKey";
         private const string APIKEY_VALID_DELAY_SETTING = "DnnMcp_ApiKeyValidDelay";
         public const string APIKEY_ACTIVE_SETTING = "DnnMcp_ApiKeyActive";
