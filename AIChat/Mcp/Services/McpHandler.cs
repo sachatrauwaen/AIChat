@@ -34,7 +34,7 @@ namespace Dnn.Mcp.WebApi.Services.Mcp
         private readonly IServiceProvider _dependencyProvider;
 
         private const string ProtocolVersion = "2024-11-05";
-        private const string ServerName = "McpStreamableHttpServer";
+        private const string ServerName = "DnnMcpServer";
         private const string ServerVersion = "1.0.0";   
         private string _currentLogLevel = "info"; // Default log level
 
@@ -138,6 +138,7 @@ namespace Dnn.Mcp.WebApi.Services.Mcp
                 .Select(t => new Models.Mcp.McpToolDefinition
                 {
                     Name = t.Name,
+                    Title = string.IsNullOrWhiteSpace(t.Title) ? null : t.Title,
                     Description = t.Description,
                     InputSchema = ConvertParametersToJsonSchema(t.Parameters)
                 }).ToList();
@@ -168,9 +169,12 @@ namespace Dnn.Mcp.WebApi.Services.Mcp
 
             foreach (var param in parameters)
             {
+                var jsonType = MapParameterType(param.Type);
+                var isNumeric = jsonType == "integer" || jsonType == "number";
+
                 var propertySchema = new JObject
                 {
-                    ["type"] = MapParameterType(param.Type)
+                    ["type"] = jsonType
                 };
 
                 if (!string.IsNullOrWhiteSpace(param.Description))
@@ -179,12 +183,12 @@ namespace Dnn.Mcp.WebApi.Services.Mcp
                 }
 
                 // Add numeric constraints
-                if (param.MinValue.HasValue && (param.Type == "int" || param.Type == "float"))
+                if (param.MinValue.HasValue && isNumeric)
                 {
                     propertySchema["minimum"] = param.MinValue.Value;
                 }
 
-                if (param.MaxValue.HasValue && (param.Type == "int" || param.Type == "float"))
+                if (param.MaxValue.HasValue && isNumeric)
                 {
                     propertySchema["maximum"] = param.MaxValue.Value;
                 }
@@ -226,8 +230,13 @@ namespace Dnn.Mcp.WebApi.Services.Mcp
             {
                 "string" => "string",
                 "int" => "integer",
+                "integer" => "integer",
                 "float" => "number",
+                "number" => "number",
+                "double" => "number",
+                "decimal" => "number",
                 "bool" => "boolean",
+                "boolean" => "boolean",
                 "array" => "array",
                 "object" => "object",
                 _ => "string" // Default to string for unknown types
