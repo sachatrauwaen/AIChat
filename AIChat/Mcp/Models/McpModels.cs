@@ -82,7 +82,7 @@ namespace Dnn.Mcp.WebApi.Models.Mcp
         [JsonProperty("name")]
         public string Name { get; set; }
 
-        [JsonProperty("title")]
+        [JsonProperty("title", NullValueHandling = NullValueHandling.Ignore)]
         public string Title { get; set; }
 
         [JsonProperty("description")]
