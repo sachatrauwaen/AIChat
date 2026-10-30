@@ -220,6 +220,45 @@ This document describes the MCP tools registered in `Satrabel.AIChat.Tools`. Too
   - On success: `{ success: true, message: "Email sent successfully" }`.
   - On failure: `{ success: false, error: "<message or SMTP error>" }`.
 
+---
+
+### Upgrade Diagnostics (Host only, read-only)
+
+Used when testing a DNN Platform or extension upgrade. Each tool returns an error unless the API key's user is a Host, because each exposes server-wide state. None of them installs anything: package installs go through Bulk Install's remote API (`dnn-bulkinstall`), so the MCP key never carries install rights.
+
+#### `get-extensions` – Get Installed Extensions
+- **Purpose**: List installed extension packages and versions, as Persona Bar > Extensions shows them. Diff the output before and after an upgrade.
+- **Parameters**:
+  - **`includeSystem`** *(boolean, optional)*: Include DNN's own system packages; default `false`.
+  - **`packageType`** *(string, optional)*: Only this type, e.g. `Module`, `Skin`, `Library`.
+  - **`name`** *(string, optional)*: Only packages whose name or friendly name contains this text.
+- **Return value** (JSON): `{ count, packages: [{ Name, FriendlyName, PackageType, Version, IsSystemPackage, Owner, Organization, LastModifiedOnDate }] }`.
+
+#### `get-admin-log` – Get Admin Log
+- **Purpose**: Read the Admin Log (event log), newest first, with exception details.
+- **Parameters**:
+  - **`logType`** *(string, optional)*: Log type key, e.g. `GENERAL_EXCEPTION`, `MODULE_UPDATED`. Omit for all.
+  - **`portalId`** *(integer, optional)*: Only this portal. Omit for all portals.
+  - **`pageSize`** *(integer, optional)*: 1–200; default 25.
+  - **`pageIndex`** *(integer, optional)*: Zero-based; default 0.
+  - **`since`** *(string, optional)*: Server-local date/time; filters the returned page.
+- **Return value** (JSON): `{ totalRecords, pageIndex, pageSize, returned, entries: [{ LogCreateDate, LogTypeKey, LogPortalName, LogUserName, LogServerName, Summary, Exception }] }`.
+
+#### `read-log-file` – Read Application Log File
+- **Purpose**: List or tail the files in `Portals/_default/Logs` (Serilog `log<yyyyMMdd>.resources` on DNN 10.4+, log4net `*.log.resources` before).
+- **Parameters**:
+  - **`file`** *(string, optional)*: A file name from the list, or `latest`. Omit to list the files.
+  - **`tail`** *(integer, optional)*: Last N matching lines, 1–2000; default 200.
+  - **`contains`** *(string, optional)*: Only lines containing this text, case-insensitive (e.g. `[ERR]`).
+- **Return value**: Without `file`, JSON `[{ Name, SizeKb, LastWriteTime }]`; with it, a header line then the matching lines.
+
+#### `check-binding-redirects` – Check Binding Redirects
+- **Purpose**: Compare `web.config` binding redirects with the assembly versions in `bin`. A redirect to a different version than `bin` holds makes that assembly fail to load. Pass `proposed` to check what a package manifest would write before installing it.
+- **Parameters**:
+  - **`proposed`** *(string, optional)*: Comma-separated `Name=Version` pairs, e.g. `MailKit=4.15.0.0,MimeKit=4.15.0.0`.
+  - **`onlyProblems`** *(boolean, optional)*: Return only mismatches; default `false`.
+- **Return value** (JSON): `{ checkedCount, problems, results: [{ Assembly, BinVersion, Redirect, Proposed, Status }] }`. `Status` is `ok`, `not in bin` (GAC/framework), `redirect differs from bin`, or `proposed redirect differs from bin`.
+
 ### AIChat MCP Tools
 
 This document describes the MCP tools registered in `AIChat/Tools`.  
