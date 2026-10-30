@@ -217,6 +217,7 @@
     <Compile Include="Tools\ToolKit.cs" />
     <Compile Include="Tools\FileTools.cs" />
     <Compile Include="Tools\ModuleTools.cs" />
+    <Compile Include="Tools\UpgradeTools.cs" />
     <Compile Include="Tools\TemplateSettingsSchema.cs" />
     <Compile Include="Tools\UpdateHtmlModule.cs" />
     <Compile Include="Tools\UpdatePage.cs" />

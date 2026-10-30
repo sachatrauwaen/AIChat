@@ -15,6 +15,7 @@ namespace Dnn.Mcp.WebApi.Tools
             services.AddTransient<IMcpProvider, AddModuleTool>();
             services.AddTransient<IMcpProvider, GetModulesTool>();
             services.AddTransient<IMcpProvider, ModuleTools>();
+            services.AddTransient<IMcpProvider, UpgradeTools>();
 
             services.AddTransient<IMcpProvider, GetFoldersTool>();
             services.AddTransient<IMcpProvider, GetFilesTool>();
