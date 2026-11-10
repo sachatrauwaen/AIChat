@@ -53,7 +53,9 @@ namespace Dnn.Mcp.WebApi.Models.Mcp
             return new JsonRpcResponse { Id = id, Result = result };
         }
 
-        public static JsonRpcResponse ErrorResponse(object id, int code, string message)
+        // JSON-RPC 2.0 requires a null id on an error response whose request id could not
+        // be determined, so this parameter is deliberately nullable.
+        public static JsonRpcResponse ErrorResponse(object? id, int code, string message)
         {
             return new JsonRpcResponse
             {
